@@ -5,8 +5,10 @@
 //  Created by Mike Erickson on 10/7/22.
 //
 #include <sstream>
+#include <cmath>
 #include <numbers>
 #include "RenderGraph.h"
+#include "TestRenderer.hpp"
 
 OSStatus RenderingCallback(void *inRefCon,
                            AudioUnitRenderActionFlags *ioActionFlags,
@@ -20,6 +22,7 @@ OSStatus RenderingCallback(void *inRefCon,
     std::shared_ptr<neato::IRenderReturn> ret_ptr = renderer->Render(params);
     return ret_ptr->GetErrorCode();
 }
+
 
 class MacRenderConstants : public  neato::PlatformRenderConstantsDictionary
 {
@@ -56,15 +59,15 @@ class MacRenderReturn : public neato::IRenderReturn
 public:
     MacRenderReturn()
     {
-        setCodeAndDescription(noErr);
+        SetCodeAndDescription(noErr);
     }
     explicit MacRenderReturn(OSStatus code)
     {
-        setCodeAndDescription(code);
+        SetCodeAndDescription(code);
     }
     explicit MacRenderReturn(OSStatus code, utf8_string desc)
     {
-        setCodeAndDescription(code, desc);
+        SetCodeAndDescription(code, desc);
     }
     virtual neato::OS_RETURN GetErrorCode() const
     {
@@ -78,20 +81,20 @@ public:
     {
         return (_code == noErr);
     }
-    void setDescription(utf8_string description)
+    void SetDescription(utf8_string description)
     {
         _description = description;
     }
-    void setCode(OSStatus error)
+    void SetCode(OSStatus error)
     {
         _code = error;
     }
-    void setCodeAndDescription(OSStatus error)
+    void SetCodeAndDescription(OSStatus error)
     {
         _code = error;
         _description = _code_to_decription(error);
     }
-    void setCodeAndDescription(OSStatus error, utf8_string desc)
+    void SetCodeAndDescription(OSStatus error, utf8_string desc)
     {
         _code = error;
         _description = desc;
@@ -107,11 +110,19 @@ private:
     OSStatus _code;
 };
 
+std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn()
+{
+    return std::make_shared<MacRenderReturn>();
+}
+std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn(OS_RETURN status, const utf8_string& desc)
+{
+    return std::make_shared<MacRenderReturn>(status, desc);
+}
 
 class MacRenderGraph : public neato::IRenderGraph
 {
 public:
-    MacRenderGraph(const neato::audio_render_creation_params_t& params)
+    MacRenderGraph(const neato::audio_stream_description_t& params) : generic_stream_desc(params)
     {
         OSErr err;
         _component_description.componentType = kAudioUnitType_Output;
@@ -190,7 +201,7 @@ public:
         OSErr err = AudioOutputUnitStart(_unit);
         if (err)
         {
-            error->setCodeAndDescription(err, "Could not start audio unit");
+            error->SetCodeAndDescription(err, "Could not start audio unit");
         }
         return error;
     }
@@ -201,32 +212,14 @@ public:
         OSStatus status = AudioOutputUnitStop(_unit);
         if (status)
         {
-            error->setCodeAndDescription(status, "Could not stop audio unit");
+            error->SetCodeAndDescription(status, "Could not stop audio unit");
         }
         return error;
     }
     
     std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& params)
     {
-        std::shared_ptr<neato::IRenderReturn> error = std::make_shared<MacRenderReturn>();
-        
-        static float theta;
-        const float two_pi = std::numbers::pi * 2.0f;
-        const float frequency = 440;
-    
-        SInt16 *left = (SInt16 *)params.ioData->mBuffers[0].mData;
-        for (UInt32 frame = 0; frame < params.inNumberFrames; ++frame) {
-            left[frame] = (SInt16)(sin(theta) * 32767.0f);
-            theta += two_pi * frequency / _stream_description.mSampleRate;
-            if (theta > two_pi) {
-                theta -= two_pi;
-            }
-        }
-    
-        // Copy left channel to right channel
-        memcpy(params.ioData->mBuffers[1].mData, left, params.ioData->mBuffers[1].mDataByteSize);
-        
-        return error;
+        return _renderImpl.Render(params, generic_stream_desc);
     }
 private:
     AudioComponentDescription _component_description;
@@ -234,6 +227,9 @@ private:
     AudioUnit _unit;
     AURenderCallbackStruct _input;
     AudioStreamBasicDescription _stream_description;
+    neato::audio_stream_description_t generic_stream_desc;
+    TestRenderer _renderImpl;
+
 };
 
 std::shared_ptr<neato::PlatformRenderConstantsDictionary> neato::CreateRenderConstantsDictionary()
@@ -241,7 +237,7 @@ std::shared_ptr<neato::PlatformRenderConstantsDictionary> neato::CreateRenderCon
     return std::make_shared<MacRenderConstants>();
 }
 
-std::shared_ptr<neato::IRenderGraph> neato::CreateRenderGraph(const neato::audio_render_creation_params_t& creation_params)
+std::shared_ptr<neato::IRenderGraph> neato::CreateRenderGraph(const neato::audio_stream_description_t& creation_params)
 {
     std::shared_ptr<neato::IRenderGraph> graph = std::make_shared<MacRenderGraph>(creation_params);
     return graph;

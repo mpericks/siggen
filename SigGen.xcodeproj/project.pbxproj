@@ -10,6 +10,7 @@
 		A1A8F16828F07DA200A86E8B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F16728F07DA200A86E8B /* main.cpp */; };
 		A1A8F17028F07EBD00A86E8B /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1A8F16F28F07EBC00A86E8B /* AudioUnit.framework */; };
 		A1A8F17428F08A8000A86E8B /* RenderGraph_Mac.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F17228F08A8000A86E8B /* RenderGraph_Mac.cpp */; };
+		A1A8F17728F46BF600A86E8B /* TestRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F17528F46BF600A86E8B /* TestRenderer.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +32,8 @@
 		A1A8F17128F0811500A86E8B /* RenderGraph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RenderGraph.h; sourceTree = "<group>"; };
 		A1A8F17228F08A8000A86E8B /* RenderGraph_Mac.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RenderGraph_Mac.cpp; sourceTree = "<group>"; };
 		A1A8F17328F08A8000A86E8B /* RenderGraph_Mac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RenderGraph_Mac.h; sourceTree = "<group>"; };
+		A1A8F17528F46BF600A86E8B /* TestRenderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestRenderer.cpp; sourceTree = "<group>"; };
+		A1A8F17628F46BF600A86E8B /* TestRenderer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TestRenderer.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +71,8 @@
 				A1A8F16728F07DA200A86E8B /* main.cpp */,
 				A1A8F17128F0811500A86E8B /* RenderGraph.h */,
 				A1A8F17228F08A8000A86E8B /* RenderGraph_Mac.cpp */,
+				A1A8F17528F46BF600A86E8B /* TestRenderer.cpp */,
+				A1A8F17628F46BF600A86E8B /* TestRenderer.hpp */,
 				A1A8F17328F08A8000A86E8B /* RenderGraph_Mac.h */,
 			);
 			path = SigGen;
@@ -140,6 +145,7 @@
 			files = (
 				A1A8F17428F08A8000A86E8B /* RenderGraph_Mac.cpp in Sources */,
 				A1A8F16828F07DA200A86E8B /* main.cpp in Sources */,
+				A1A8F17728F46BF600A86E8B /* TestRenderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,7 +11,7 @@ int main(int argc, const char * argv[])
 {
 
     int ret_val = 0;
-    neato::audio_render_creation_params_t create_params;
+    neato::audio_stream_description_t create_params;
     std::shared_ptr<neato::PlatformRenderConstantsDictionary> render_constants = neato::CreateRenderConstantsDictionary();
     create_params.format_id = render_constants->Format(neato::format_id_pcm);
     create_params.flags = 0
@@ -37,7 +37,7 @@ int main(int argc, const char * argv[])
     }
     
     std::shared_ptr<neato::IRenderReturn> ret = renderer->Start();
-    usleep(1000000);
+    usleep(3000000);
     renderer->Stop();
 
     return ret_val;

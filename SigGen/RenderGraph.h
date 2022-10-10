@@ -30,11 +30,11 @@ namespace neato
         virtual uint32_t Flag(uint32_t flags) const = 0;
     };
 
-    struct audio_render_creation_params_t
+    struct audio_stream_description_t
     {
         uint32_t format_id;
         uint32_t flags;
-        float sample_rate;
+        double sample_rate;
         uint32_t bits_per_channel;
         uint32_t channels_per_frame;
         uint32_t frames_per_packet;
@@ -50,6 +50,9 @@ namespace neato
         virtual OS_RETURN GetErrorCode() const = 0;
         virtual utf8_string GetErrorString() const = 0;
         virtual bool DidSucceed() const = 0;
+        virtual void SetCode(OS_RETURN code) = 0;
+        virtual void SetDescription(utf8_string desc) = 0;
+        virtual void SetCodeAndDescription(OS_RETURN code, utf8_string dec) = 0;
     };
 
     struct IRenderGraph
@@ -60,5 +63,7 @@ namespace neato
     };
 
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();
-    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_render_creation_params_t& creation_params);
+    std::shared_ptr<IRenderReturn> CreateRenderReturn();
+    std::shared_ptr<IRenderReturn> CreateRenderReturn(OS_RETURN, const utf8_string&);
+    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params);
 };
