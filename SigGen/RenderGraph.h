@@ -23,6 +23,7 @@ namespace neato
     const uint32_t format_flag_signed_int = 1;
     const uint32_t format_flag_packed = 2;
     const uint32_t format_flag_non_interleaved = 4;
+    const float PCM_Normalize = 32767.0;
 
     struct PlatformRenderConstantsDictionary
     {

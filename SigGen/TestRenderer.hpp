@@ -9,13 +9,21 @@
 #include <memory>
 #include <numbers>
 #include "RenderGraph.h"
+#include "base_waveforms.hpp"
+#include "envelope.hpp"
 
 class TestRenderer
 {
 public:
-    std::shared_ptr<neato::IRenderReturn> Render(neato::render_params_t params, const neato::audio_stream_description_t& stream_desc);
+    TestRenderer(const neato::audio_stream_description_t& stream_desc);
+    std::shared_ptr<neato::IRenderReturn> Render(neato::render_params_t params);
 private:
-    float theta;
-    constexpr static const float two_pi = std::numbers::pi * 2.0f;
+    float frequency;
+    neato::MutableSine carrier;
+    neato::MutableSaw modulator;
+    neato::audio_stream_description_t _stream_desc;
+    float modulator_gain;
+    float current_frequency;
+    std::shared_ptr<neato::IEnvelope> bell_envelope;
 };
 

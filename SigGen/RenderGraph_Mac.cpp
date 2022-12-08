@@ -122,7 +122,9 @@ std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn(OS_RETURN status
 class MacRenderGraph : public neato::IRenderGraph
 {
 public:
-    MacRenderGraph(const neato::audio_stream_description_t& params) : generic_stream_desc(params)
+    MacRenderGraph(const neato::audio_stream_description_t& params)
+    : generic_stream_desc(params)
+    , _renderImpl(params)
     {
         OSErr err;
         _component_description.componentType = kAudioUnitType_Output;
@@ -219,7 +221,7 @@ public:
     
     std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& params)
     {
-        return _renderImpl.Render(params, generic_stream_desc);
+        return _renderImpl.Render(params);
     }
 private:
     AudioComponentDescription _component_description;

@@ -6,28 +6,33 @@
 //
 
 #include "TestRenderer.hpp"
-#include <cmath>
+#include "base_waveforms.hpp"
 
-std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(neato::render_params_t params, const neato::audio_stream_description_t& stream_desc)
+TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_in)
+: frequency(400.0f)
+, carrier(frequency, stream_desc_in.sample_rate)
+, modulator(560.0f, stream_desc_in.sample_rate, false)
+, _stream_desc(stream_desc_in)
+, modulator_gain(190.0)
+, current_frequency(frequency)
+, bell_envelope(neato::CreateEnvelope(neato::EnvelopeID::Bell1, stream_desc_in.sample_rate))
+{
+    
+}
+
+std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(neato::render_params_t params)
 {
     std::shared_ptr<neato::IRenderReturn> error = neato::CreateRenderReturn();
 
-    static float frequency = 440;
-
     SInt16 *left = (SInt16 *)params.ioData->mBuffers[0].mData;
+    
     for (UInt32 frame = 0; frame < params.inNumberFrames; ++frame)
     {
-        left[frame] = (SInt16)(std::sinf(theta) * 32767.0f);
-        theta += two_pi * frequency / stream_desc.sample_rate;
-        if (theta > two_pi)
-        {
-            theta -= two_pi;
-        }
-        frequency += 0.05;
-        if (frequency > 2000.0f)
-        {
-            frequency = 440;
-        }
+        left[frame] = (SInt16)(carrier.Value() * neato::PCM_Normalize * bell_envelope->Increment());
+        
+        current_frequency = frequency + (modulator.Increment() * modulator_gain);
+        carrier.setFrequency(current_frequency);
+        carrier.Increment();
     }
 
     // Copy left channel to right channel

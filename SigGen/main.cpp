@@ -37,7 +37,8 @@ int main(int argc, const char * argv[])
     }
     
     std::shared_ptr<neato::IRenderReturn> ret = renderer->Start();
-    usleep(3000000);
+    std::cout << "Press enter to stop annoying sound" << std::endl;
+    getchar();
     renderer->Stop();
 
     return ret_val;
