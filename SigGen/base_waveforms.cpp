@@ -6,3 +6,7 @@
 //
 
 #include "base_waveforms.hpp"
+neato::ISampleSource::~ISampleSource()
+{
+    
+}

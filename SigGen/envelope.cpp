@@ -5,16 +5,19 @@
 //  Created by Mike Erickson on 12/4/22.
 //
 
+#include "base_waveforms.hpp"
 #include "envelope.hpp"
 #include "audio_time.h"
+
 #include <vector>
+
 namespace neato
 {
-enum class GainSegmentId
-{
-    attack,
-    decay
-};
+    enum class GainSegmentId
+    {
+        attack,
+        decay
+    };
 }
 
 class LinearEnvelopeSegment : public neato::IEnvelopeSegment
@@ -45,7 +48,7 @@ public:
             gain_now += gain_per_sample;
         }
     }
-    virtual float Increment()
+    virtual double Sample()
     {
         float return_gain = gains_for_each_sample[current_segment_sample_index];
         current_segment_sample_index += 1;
@@ -79,24 +82,39 @@ private:
     neato::GainSegmentId id;
 };
 
-class Bell1Envelope : public neato::IEnvelope, public neato::IStateCompletionCallback
+class ConstEnvelope : public neato::ISampleSource
+{
+public:
+    ConstEnvelope(double gain_in) : gain(gain_in)
+    {
+        
+    }
+    virtual double Sample()
+    {
+        return gain;
+    }
+private:
+    double gain;
+};
+
+class Bell1Envelope : public neato::ISampleSource, public neato::IStateCompletionCallback
 {
 public:
     Bell1Envelope(float sample_rate_in)
         : attack(sample_rate_in, 0.0, 0.5, 0.003, neato::GainSegmentId::attack)
-        , decay(sample_rate_in, 0.5, 0.0, 3.0, neato::GainSegmentId::decay)
+        , decay(sample_rate_in, 0.5, 0.0, 3.75, neato::GainSegmentId::decay)
         , current_segment(nullptr)
     {
         attack.SetGainStateCompletionCallback(this);
         decay.SetGainStateCompletionCallback(this);
         current_segment = &attack;
     }
-    virtual float Increment()
+    virtual double Sample()
     {
         float gain = 0.0;
         if (nullptr != current_segment)
         {
-            gain = current_segment->Increment();
+            gain = current_segment->Sample();
         }
         else
         {
@@ -122,16 +140,26 @@ private:
     
 };
 
-std::shared_ptr<neato::IEnvelope> CreateBell1(float sample_rate_in)
+std::shared_ptr<neato::ISampleSource> CreateConstant(float gain_in)
 {
-    std::shared_ptr<neato::IEnvelope> envelope = std::make_shared<Bell1Envelope>(sample_rate_in);
+    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<ConstEnvelope>(gain_in);
     
     return envelope;
 }
 
-std::shared_ptr<neato::IEnvelope> neato::CreateEnvelope(neato::EnvelopeID id, float sample_rate_in)
+std::shared_ptr<neato::ISampleSource> CreateBell1(float sample_rate_in)
 {
-    std::shared_ptr<neato::IEnvelope> envelope;
+    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in);
+    
+    return envelope;
+}
+std::shared_ptr<neato::ISampleSource> neato::CreateConstantGain(double gain)
+{
+    return CreateConstant(gain);
+}
+std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id, float sample_rate_in)
+{
+    std::shared_ptr<neato::ISampleSource> envelope;
     
     switch (id)
     {
