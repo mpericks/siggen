@@ -100,9 +100,9 @@ private:
 class Bell1Envelope : public neato::ISampleSource, public neato::IStateCompletionCallback
 {
 public:
-    Bell1Envelope(float sample_rate_in)
-        : attack(sample_rate_in, 0.0, 0.5, 0.003, neato::GainSegmentId::attack)
-        , decay(sample_rate_in, 0.5, 0.0, 3.75, neato::GainSegmentId::decay)
+    Bell1Envelope(double sample_rate_in, double scale)
+        : attack(sample_rate_in, 0.0, 0.5 * scale, 0.003, neato::GainSegmentId::attack)
+        , decay(sample_rate_in, 0.5 * scale, 0.0, 3.75, neato::GainSegmentId::decay)
         , current_segment(nullptr)
     {
         attack.SetGainStateCompletionCallback(this);
@@ -147,9 +147,9 @@ std::shared_ptr<neato::ISampleSource> CreateConstant(float gain_in)
     return envelope;
 }
 
-std::shared_ptr<neato::ISampleSource> CreateBell1(float sample_rate_in)
+std::shared_ptr<neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
 {
-    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in);
+    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in, scale);
     
     return envelope;
 }
@@ -157,18 +157,38 @@ std::shared_ptr<neato::ISampleSource> neato::CreateConstantGain(double gain)
 {
     return CreateConstant(gain);
 }
-std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id, float sample_rate_in)
+
+std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id, double sample_rate_in, double scale_in)
 {
     std::shared_ptr<neato::ISampleSource> envelope;
     
     switch (id)
     {
         case neato::EnvelopeID::Bell1:
-            envelope = CreateBell1(sample_rate_in);
+            envelope = CreateBell1(sample_rate_in, scale_in);
             break;
         default:
             break;
     }
     
     return envelope;
+}
+
+double neato::dbToGain(double db)
+{
+    double gain = 1.0;
+    gain = std::pow(10, db / 20);
+    return gain;
+}
+
+std::vector<double> neato::dbToGains(std::vector<double>&& gains_in_db)
+{
+    const std::vector<double>::size_type signal_count = gains_in_db.size();
+    std::vector<double> gains;
+    gains.reserve(signal_count);
+    std::for_each(gains_in_db.begin(), gains_in_db.end(), [&gains](double db)
+    {
+        gains.push_back(neato::dbToGain(db));
+    });
+    return gains;
 }

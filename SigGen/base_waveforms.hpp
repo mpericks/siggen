@@ -266,5 +266,25 @@ namespace neato
         std::shared_ptr<ISampleSource> frequency_modulator;
         std::shared_ptr<ISampleSource> amplitude_modulator;
     };
+
+    class SampleSummer : public ISampleSource
+    {
+    public:
+        SampleSummer(const std::vector<std::shared_ptr<ISampleSource>>& sample_sources_in) : sample_sources(sample_sources_in)
+        {
+            
+        }
+        virtual double Sample()
+        {
+            double ret_val = 0;
+            std::for_each(sample_sources.begin(), sample_sources.end(), [&ret_val](std::shared_ptr<ISampleSource>& sampler)
+            {
+                ret_val += sampler->Sample();
+            });
+            return ret_val;
+        }
+    private:
+        std::vector<std::shared_ptr<ISampleSource>> sample_sources;
+    };
 };
 

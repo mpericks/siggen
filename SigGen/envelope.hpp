@@ -29,11 +29,10 @@ namespace neato
         Bell1
     };
 
-//    class IEnvelopeTarget
-//    {
-//        virtual void SetEnvelope(std::shared_ptr<neato::ISampleSource> envelope_in) = 0;
-//    };
     std::shared_ptr<neato::ISampleSource> CreateConstantGain(double gain);
-    std::shared_ptr<neato::ISampleSource> CreateEnvelope(EnvelopeID id, float sample_rate_in);
+    std::shared_ptr<neato::ISampleSource> CreateEnvelope(EnvelopeID id, double sample_rate_in, double scale);
+
+    double dbToGain(double db);
+    std::vector<double> dbToGains(std::vector<double>&& gains_in_db);
 };
 
