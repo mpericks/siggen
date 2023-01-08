@@ -200,7 +200,7 @@ TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_
     //signal = CreateFMBell(center_freq, stream_desc_in);
     //signal = CreateAdditiveBell(center_freq, stream_desc_in);
     //signal = CreateHarmonicBells(center_freq, stream_desc_in);
-    //signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
+    signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
     //signal = CreateFlute(center_freq, stream_desc_in.sample_rate);
 }
 
