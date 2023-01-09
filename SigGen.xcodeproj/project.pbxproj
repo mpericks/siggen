@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1666967296B73AB006044E5 /* composite_waveforms.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1666965296B73AB006044E5 /* composite_waveforms.cpp */; };
 		A1A8F16828F07DA200A86E8B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F16728F07DA200A86E8B /* main.cpp */; };
 		A1A8F17428F08A8000A86E8B /* RenderGraph_Mac.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F17228F08A8000A86E8B /* RenderGraph_Mac.cpp */; };
 		A1A8F17728F46BF600A86E8B /* TestRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1A8F17528F46BF600A86E8B /* TestRenderer.cpp */; };
@@ -28,6 +29,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1666965296B73AB006044E5 /* composite_waveforms.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = composite_waveforms.cpp; sourceTree = "<group>"; };
+		A1666966296B73AB006044E5 /* composite_waveforms.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = composite_waveforms.hpp; sourceTree = "<group>"; };
 		A1A8F16428F07DA200A86E8B /* SigGen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SigGen; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1A8F16728F07DA200A86E8B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A1A8F16F28F07EBC00A86E8B /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
@@ -77,6 +80,8 @@
 			isa = PBXGroup;
 			children = (
 				A1A8F16728F07DA200A86E8B /* main.cpp */,
+				A1666966296B73AB006044E5 /* composite_waveforms.hpp */,
+				A1666965296B73AB006044E5 /* composite_waveforms.cpp */,
 				A1A8F17128F0811500A86E8B /* RenderGraph.h */,
 				A1FAFF902922FACF00DE681F /* base_waveforms.cpp */,
 				A1FAFF912922FACF00DE681F /* base_waveforms.hpp */,
@@ -161,6 +166,7 @@
 				A1A8F17428F08A8000A86E8B /* RenderGraph_Mac.cpp in Sources */,
 				A1A8F16828F07DA200A86E8B /* main.cpp in Sources */,
 				A1A8F17728F46BF600A86E8B /* TestRenderer.cpp in Sources */,
+				A1666967296B73AB006044E5 /* composite_waveforms.cpp in Sources */,
 				A1FAFF97293D57B700DE681F /* envelope.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

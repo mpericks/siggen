@@ -177,7 +177,7 @@ std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id
 double neato::dbToGain(double db)
 {
     double gain = 1.0;
-    gain = std::pow(10, db / 20);
+    gain = std::pow(10.0, db / 20.0);
     return gain;
 }
 
@@ -191,4 +191,18 @@ std::vector<double> neato::dbToGains(std::vector<double>&& gains_in_db)
         gains.push_back(neato::dbToGain(db));
     });
     return gains;
+}
+
+std::vector<std::shared_ptr<neato::ISampleSource>> neato::EnvelopesFromConstGains(std::vector<double> gains)
+{
+    const std::vector<double>::size_type signal_count = gains.size();
+    std::vector<std::shared_ptr<neato::ISampleSource>> envelopes;
+    envelopes.reserve(signal_count);
+    std::for_each(gains.begin(), gains.end(), [&envelopes](double gain)
+    {
+        std::shared_ptr<neato::ISampleSource> env_temp = neato::CreateConstantGain(gain);
+        envelopes.push_back(env_temp);
+    });
+    
+    return envelopes;
 }

@@ -32,6 +32,8 @@ namespace neato
         virtual ~ISampleSource() = 0;
         virtual IMutableFrequency* GetMutableFrequencyPtr(){return nullptr;}
     };
+
+    typedef std::vector<std::shared_ptr<neato::ISampleSource>> sample_source_vector_t;
     
     class AudioRadians : public ISampleSource, IMutableFrequency
     {

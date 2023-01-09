@@ -34,5 +34,6 @@ namespace neato
 
     double dbToGain(double db);
     std::vector<double> dbToGains(std::vector<double>&& gains_in_db);
+    std::vector<std::shared_ptr<neato::ISampleSource>> EnvelopesFromConstGains(std::vector<double> gains);
 };
 
