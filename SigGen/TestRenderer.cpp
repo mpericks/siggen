@@ -108,7 +108,7 @@ std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(dou
         envelopes.push_back(env_temp);
     }
     
-    std::shared_ptr<neato::ISampleSource> composite_signal = neato::CreateCompositeSignalWithSignalsAndEnvelopes(sine_waves, envelopes, stream_desc_in.sample_rate);
+    std::shared_ptr<neato::ISampleSource> composite_signal = std::make_shared<neato::SampleSummer>(neato::CreateMultiplierArray(sine_waves, envelopes));
     return composite_signal;
 }
 
@@ -140,8 +140,12 @@ std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, con
         envelopes.push_back(env_temp);
     }
     
-    //make the composite signal
-    std::shared_ptr<neato::ISampleSource> composite_signal = neato::CreateCompositeSignalWithSignalsAndEnvelopes(sine_waves, envelopes, stream_desc_in.sample_rate);
+    //multiply envelopes and signals
+    std::vector<std::shared_ptr<neato::ISampleSource>> multiplied_signals = neato::CreateMultiplierArray(sine_waves, envelopes);
+    
+    //sum all the signals
+    std::shared_ptr<neato::ISampleSource> composite_signal = std::make_shared<neato::SampleSummer>(multiplied_signals);
+    
     return composite_signal;
 }
 
@@ -158,12 +162,12 @@ std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, co
 
 TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_in)
 {
-    double center_freq = 400.0f;
+    double center_freq = 440.0f;
     //signal = CreateFMBell(center_freq, stream_desc_in);
     //signal = CreateAdditiveBell(center_freq, stream_desc_in);
     //signal = CreateHarmonicBells(center_freq, stream_desc_in);
-    //signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
-    signal = CreateFlute(center_freq, stream_desc_in.sample_rate);
+    signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
+    //signal = CreateFlute(center_freq, stream_desc_in.sample_rate);
 }
 
 std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(neato::render_params_t params)

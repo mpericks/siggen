@@ -14,6 +14,17 @@ namespace neato
         
     }
     
+    std::vector<double> FrequenciesFromMultiples(double center_freq, std::vector<double>&& frequency_multiples)
+    {
+        std::vector<double> frequencies;
+        frequencies.reserve(frequency_multiples.size());
+        std::for_each(frequency_multiples.begin(), frequency_multiples.end(), [center_freq, &frequencies](double multiplier)
+        {
+            frequencies.push_back(center_freq * multiplier);
+        });
+        return frequencies;
+    }
+    
     std::vector<std::shared_ptr<ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<std::shared_ptr<ISampleSource>> source2_array)
     {
         std::vector<std::shared_ptr<neato::ISampleSource>> ret_array;

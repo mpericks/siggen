@@ -344,6 +344,7 @@ namespace neato
         std::shared_ptr<ISampleSource> source2;
     };
     
+    std::vector<double> FrequenciesFromMultiples(double center_freq, std::vector<double>&& frequency_multiples);
     std::vector<std::shared_ptr<ISampleSource>> CreateConstSineArray(std::vector<double> frequencies, double sample_rate);
     std::vector<std::shared_ptr<ISampleSource>> CreateDCOffsetArray(std::vector<double> offsets);
     std::vector<std::shared_ptr<ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<double> multipliers);
