@@ -19,27 +19,22 @@ constexpr static const float two_pi = std::numbers::pi * 2.0f;
 
 namespace neato
 {
-    class IMutableFrequency
-    {
-    public:
-        virtual double getFrequency() = 0;
-        virtual void setFrequency(double new_frequency) = 0;
-    };
-
     class ISampleSource
     {
     public:
         virtual double Sample() = 0;
         virtual ~ISampleSource() = 0;
-        virtual IMutableFrequency* GetMutableFrequencyPtr(){return nullptr;}
     };
 
     typedef std::vector<std::shared_ptr<neato::ISampleSource>> sample_source_vector_t;
     
-    class AudioRadians : public ISampleSource, IMutableFrequency
+    class AudioRadians : public ISampleSource
     {
     public:
-        AudioRadians(float frequency_in, float sample_rate_in) : value(0.0f), sample_rate(sample_rate_in)
+        AudioRadians(float frequency_in, float sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        : value(0.0f)
+        , sample_rate(sample_rate_in)
+        , frequency_modulator(frequency_modulator_in)
         {
             setFrequency(frequency_in);
         }
@@ -47,16 +42,16 @@ namespace neato
         virtual double Sample()
         {
             double ret_value = value;
+            if(frequency_modulator)
+            {
+                setFrequency(frequency_modulator->Sample());
+            }
             value += increment;
             if (value > two_pi)
             {
                 value -= two_pi;
             }
             return ret_value;
-        }
-        virtual IMutableFrequency* GetMutableFrequencyPtr()
-        {
-            return this;
         }
         virtual double getFrequency() {return frequency;}
         virtual void setFrequency(double new_frequency)
@@ -69,13 +64,15 @@ namespace neato
         double value;
         double increment;
         double frequency;
+        std::shared_ptr<ISampleSource> frequency_modulator;
         const float sample_rate;
     };
 
-    class MutableSine : public ISampleSource, IMutableFrequency
+    class MutableSine : public ISampleSource
     {
     public:
-        MutableSine(float frequency_in, float sample_rate_in) : theta(frequency_in, sample_rate_in), value(0.0f)
+        MutableSine(float frequency_in, float sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        : theta(frequency_in, sample_rate_in, frequency_modulator_in), value(0.0f)
         {
             
         }
@@ -86,10 +83,6 @@ namespace neato
             return ret_value;
         }
         float Value() const { return value;}
-        virtual IMutableFrequency* GetMutableFrequencyPtr()
-        {
-            return this;
-        }
         virtual double getFrequency() {return theta.getFrequency();}
         virtual void setFrequency(double new_frequency)
         {
@@ -107,7 +100,7 @@ namespace neato
         {
             uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);// + 1;
             sine_table.reserve(samples_per_cycle);
-            AudioRadians theta(frequency_in, sample_rate_in);
+            AudioRadians theta(frequency_in, sample_rate_in, std::shared_ptr<ISampleSource>());
             for (uint32_t i = 0; i < samples_per_cycle; i++)
             {
                 sine_table.push_back(std::sinf(theta.Sample()));
@@ -135,9 +128,9 @@ namespace neato
     public:
         ConstSaw(float frequency_in, float sample_rate_in, bool negative_slope_in)
         {
-            uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);// + 1;
+            uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);
             saw_table.reserve(samples_per_cycle);
-            AudioRadians theta(frequency_in, sample_rate_in);
+            AudioRadians theta(frequency_in, sample_rate_in, std::shared_ptr<ISampleSource>());
             for (uint32_t i = 0; i < samples_per_cycle; i++)
             {
                 if (negative_slope_in)
@@ -166,10 +159,13 @@ namespace neato
         std::vector<double>::size_type index;
     };
 
-    class MutableSaw : public ISampleSource, IMutableFrequency
+    class MutableSaw : public ISampleSource
     {
     public:
-        MutableSaw(float frequency_in, float sample_rate_in, bool negative_slope_in) : theta(frequency_in, sample_rate_in), value(0.0f), negative_slope(negative_slope_in)
+        MutableSaw(float frequency_in, float sample_rate_in, bool negative_slope_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        : theta(frequency_in, sample_rate_in, frequency_modulator_in)
+        , value(0.0f)
+        , negative_slope(negative_slope_in)
         {
             
         }
@@ -185,10 +181,6 @@ namespace neato
                 value = (2.0 * (theta.Sample() / two_pi)) - 1.0;
             }
             return ret_value;
-        }
-        virtual IMutableFrequency* GetMutableFrequencyPtr()
-        {
-            return this;
         }
         virtual double getFreguency() {return theta.getFrequency();}
         virtual void setFrequency(float new_frequency)
@@ -230,75 +222,6 @@ namespace neato
         }
     private:
         double value;
-    };
-
-    class ICustomModulatorFunction
-    {
-    public:
-        virtual double Modulate(double modulator_value) = 0;
-    };
-    
-    class CenterFrequencyModulator : public ICustomModulatorFunction
-    {
-    public:
-        CenterFrequencyModulator(double center_frequency_in) : center_frequency(center_frequency_in){}
-        virtual double Modulate(double signal_in)
-        {
-            return center_frequency + signal_in;
-        }
-    private:
-        double center_frequency;
-    };
-
-    class CustomModulator : public ISampleSource
-    {
-    public:
-        CustomModulator(std::shared_ptr<ISampleSource> modulation_signal_in, std::shared_ptr<ICustomModulatorFunction> modulation_function_in)
-        : modulation_signal(modulation_signal_in)
-        , modulation_function(modulation_function_in)
-        {
-            
-        }
-        virtual double Sample()
-        {
-            return modulation_function->Modulate(modulation_signal->Sample());
-        }
-    private:
-        std::shared_ptr<ISampleSource> modulation_signal;
-        std::shared_ptr<ICustomModulatorFunction> modulation_function;
-    };
-
-    class ModulatedSignal : public neato::ISampleSource
-    {
-    public:
-        ModulatedSignal(std::shared_ptr<ISampleSource> carrier_in, std::shared_ptr<ISampleSource> frequency_modulator_in, std::shared_ptr<ISampleSource> amplitude_modulator_in)
-        : carrier(carrier_in)
-        , frequency_modulator(frequency_modulator_in)
-        , amplitude_modulator(amplitude_modulator_in)
-        {
-            
-        }
-        virtual double Sample()
-        {
-            double ret_value = carrier->Sample();
-            if (amplitude_modulator)
-            {
-                ret_value *= amplitude_modulator->Sample();
-            }
-            neato::IMutableFrequency* change_freq = carrier->GetMutableFrequencyPtr();
-            if ( nullptr != change_freq )
-            {
-                if (frequency_modulator)
-                {
-                    change_freq->setFrequency(frequency_modulator->Sample());
-                }
-            }
-            return ret_value;
-        }
-    private:
-        std::shared_ptr<ISampleSource> carrier;
-        std::shared_ptr<ISampleSource> frequency_modulator;
-        std::shared_ptr<ISampleSource> amplitude_modulator;
     };
 
     class SampleSummer : public ISampleSource

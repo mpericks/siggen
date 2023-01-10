@@ -11,33 +11,35 @@
 
 std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
-    std::shared_ptr<neato::ISampleSource> carrier_temp = std::make_shared<neato::MutableSine>(center_freq, stream_desc_in.sample_rate);
     //frequency of the carrier gets modulated by a saw with a constant gain
     std::shared_ptr<neato::ISampleSource> saw_temp = std::make_shared<neato::ConstSaw>(1.4f * center_freq, stream_desc_in.sample_rate, false);
-    std::shared_ptr<neato::ISampleSource> mod_gain_temp = std::make_shared<neato::DCOffset>(160.0f);
     
     //make a modualted signal with the saw and the gain
-    std::shared_ptr<neato::ISampleSource> saw_with_gain = std::make_shared<neato::ModulatedSignal>(saw_temp, std::shared_ptr<neato::ISampleSource>(), mod_gain_temp);
-    //make a center frequency modulator function
-    std::shared_ptr<neato::ICustomModulatorFunction> center_freq_mod = std::make_shared<neato::CenterFrequencyModulator>(center_freq);
-    //then make the modulation sample source with the saw, the custom func and the gain (no frequency modulation on the saw. It PERFORMS frequency modulation on the mutable sine)
-    std::shared_ptr<neato::ISampleSource> center_freq_saw_modulator = std::make_shared<neato::CustomModulator>(saw_with_gain, center_freq_mod);
+    std::shared_ptr<neato::ISampleSource> saw_with_gain = std::make_shared<neato::SampleMultiplier>(saw_temp, 160.0);
+    
+    //make a frequency modulator
+    //std::shared_ptr<neato::ICustomModulatorFunction> center_freq_mod = std::make_shared<neato::CenterFrequencyModulator>(center_freq);
+    std::vector<std::shared_ptr<neato::ISampleSource>> frequency_modulator_signals = {saw_with_gain, std::make_shared<neato::DCOffset>(center_freq)};
+    std::shared_ptr<neato::ISampleSource> frequncy_modulator = std::make_shared<neato::SampleSummer>(frequency_modulator_signals);
+    
+    //create the sine wave with the frequency modulator
+    std::shared_ptr<neato::ISampleSource> carrier_temp = std::make_shared<neato::MutableSine>(center_freq, stream_desc_in.sample_rate, frequncy_modulator);
     
     //make an envelope for the bell
     std::shared_ptr<neato::ISampleSource> bell_envelope = neato::CreateEnvelope(neato::EnvelopeID::Bell1, stream_desc_in.sample_rate, 1.0);
     
     //make an overall modulated signal with the sine, the custom modulated saw for frequency mod, and the bell envelope for amplitude mod
-    std::shared_ptr<neato::ISampleSource> signal = std::make_shared<neato::ModulatedSignal>(carrier_temp, center_freq_saw_modulator, bell_envelope);
+    std::shared_ptr<neato::ISampleSource> signal = std::make_shared<neato::SampleMultiplier>(carrier_temp, bell_envelope);
     return signal;
 }
 
 std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sample_rate)
 {
     const uint8_t harmonic_count = 6;
-    const double tremolo_freq = 6.0;
+    const double tremolo_freq = 5.0;
     const double white_noise_gain_db = -36.0;
     std::vector<double> frequency_multiples = {1.0, 2.00, 3.0, 4.0, 5.0, 6.0};
-    std::vector<double> frequency_gains_in_db = {-9.0, -7.0, -13.0, -19.0, -49.0, -52.0};
+    std::vector<double> frequency_gains_in_db = {-7.5, -11.0, -13.0, -19.0, -30.0, -42.0};
     std::vector<double> tremolo_gains = { 0.1001,  0.2, 0.1, 0.001, 0.001, 0.001 };
         
     //tremolo modulators for higher harmonics
@@ -162,7 +164,7 @@ std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, co
 
 TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_in)
 {
-    double center_freq = 440.0f;
+    double center_freq = 300.0f;
     //signal = CreateFMBell(center_freq, stream_desc_in);
     //signal = CreateAdditiveBell(center_freq, stream_desc_in);
     //signal = CreateHarmonicBells(center_freq, stream_desc_in);

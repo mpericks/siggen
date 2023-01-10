@@ -7,7 +7,6 @@
 
 #pragma once
 #include "base_waveforms.hpp"
-#include <memory>
 
 namespace neato
 {
@@ -33,6 +32,5 @@ namespace neato
 
     double dbToGain(double db);
     std::vector<double> dbToGains(std::vector<double>&& gains_in_db);
-    //std::vector<std::shared_ptr<neato::ISampleSource>> CreateEnvelopesFromConstGains(std::vector<double> gains);
 };
 
