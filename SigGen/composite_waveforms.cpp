@@ -19,20 +19,20 @@ std::vector<double> neato::FrequenciesFromMultiples(double center_freq, std::vec
     return frequencies;
 }
 
-std::vector<std::shared_ptr<neato::ISampleSource>> neato::CreateConstSineSignalsFromFrequencies(std::vector<double> frequencies, double sample_rate)
-{
-    const std::vector<double>::size_type signal_count = frequencies.size();
-    
-    //make the const sine signals
-    std::vector<std::shared_ptr<neato::ISampleSource>> signals;
-    signals.reserve(signal_count);
-    for (std::vector<double>::size_type i = 0; i < signal_count; i++)
-    {
-        std::shared_ptr<neato::ISampleSource> carrier = std::make_shared<neato::ConstSine>(frequencies.at(i), sample_rate);
-        signals.push_back(carrier);
-    }
-    return signals;
-}
+//std::vector<std::shared_ptr<neato::ISampleSource>> neato::CreateConstSineSignalsFromFrequencies(std::vector<double> frequencies, double sample_rate)
+//{
+//    const std::vector<double>::size_type signal_count = frequencies.size();
+//    
+//    //make the const sine signals
+//    std::vector<std::shared_ptr<neato::ISampleSource>> signals;
+//    signals.reserve(signal_count);
+//    for (std::vector<double>::size_type i = 0; i < signal_count; i++)
+//    {
+//        std::shared_ptr<neato::ISampleSource> carrier = std::make_shared<neato::ConstSine>(frequencies.at(i), sample_rate);
+//        signals.push_back(carrier);
+//    }
+//    return signals;
+//}
 
 std::shared_ptr<neato::ISampleSource> neato::CreateCompositeSignalWithSignalsAndEnvelopes(std::vector<std::shared_ptr<neato::ISampleSource>> waveforms, std::vector<std::shared_ptr<neato::ISampleSource>> envelopes, double sample_rate)
 {
@@ -60,7 +60,7 @@ std::shared_ptr<neato::ISampleSource> neato::CreateCompositeConstSineSignal(std:
     assert(signal_count == gains.size());
     
     //make the const gain envelopes
-    std::vector<std::shared_ptr<neato::ISampleSource>> envelopes = EnvelopesFromConstGains(gains);
+    std::vector<std::shared_ptr<neato::ISampleSource>> envelopes = CreateDCOffsetArray(gains);
     
     //make the modulated signals
     std::vector<std::shared_ptr<neato::ISampleSource>> signals;

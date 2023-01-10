@@ -140,22 +140,11 @@ private:
     
 };
 
-std::shared_ptr<neato::ISampleSource> CreateConstant(float gain_in)
-{
-    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<ConstEnvelope>(gain_in);
-    
-    return envelope;
-}
-
 std::shared_ptr<neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
 {
     std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in, scale);
     
     return envelope;
-}
-std::shared_ptr<neato::ISampleSource> neato::CreateConstantGain(double gain)
-{
-    return CreateConstant(gain);
 }
 
 std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id, double sample_rate_in, double scale_in)
@@ -193,16 +182,4 @@ std::vector<double> neato::dbToGains(std::vector<double>&& gains_in_db)
     return gains;
 }
 
-std::vector<std::shared_ptr<neato::ISampleSource>> neato::EnvelopesFromConstGains(std::vector<double> gains)
-{
-    const std::vector<double>::size_type signal_count = gains.size();
-    std::vector<std::shared_ptr<neato::ISampleSource>> envelopes;
-    envelopes.reserve(signal_count);
-    std::for_each(gains.begin(), gains.end(), [&envelopes](double gain)
-    {
-        std::shared_ptr<neato::ISampleSource> env_temp = neato::CreateConstantGain(gain);
-        envelopes.push_back(env_temp);
-    });
-    
-    return envelopes;
-}
+

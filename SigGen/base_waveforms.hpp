@@ -13,6 +13,7 @@
 #include <numbers>
 #include <map>
 #include <vector>
+#include <random>
 
 constexpr static const float two_pi = std::numbers::pi * 2.0f;
 
@@ -200,6 +201,37 @@ namespace neato
         bool negative_slope;
     };
 
+    class WhiteNoise : public ISampleSource
+    {
+    public:
+        WhiteNoise()
+        : random_engine(random_device())
+        , random_dist(-1, 1)// Choose a random mean between -1 and 1
+        {
+            
+        }
+        virtual double Sample()
+        {
+            return random_dist(random_engine);
+        }
+    private:
+        std::random_device random_device;
+        std::default_random_engine random_engine;
+        std::uniform_real_distribution<double> random_dist;
+    };
+    
+    class DCOffset : public ISampleSource
+    {
+    public:
+        DCOffset(double value_in) : value(value_in){}
+        virtual double Sample()
+        {
+            return value;
+        }
+    private:
+        double value;
+    };
+
     class ICustomModulatorFunction
     {
     public:
@@ -288,5 +320,33 @@ namespace neato
     private:
         std::vector<std::shared_ptr<ISampleSource>> sample_sources;
     };
+    
+    class SampleMultiplier : public ISampleSource
+    {
+    public:
+        SampleMultiplier(std::shared_ptr<ISampleSource> source1_in, std::shared_ptr<ISampleSource> source2_in)
+        : source1(source1_in)
+        , source2(source2_in)
+        {
+            
+        }
+        SampleMultiplier(std::shared_ptr<ISampleSource> source1_in, double multiplier)
+        : source1(source1_in)
+        {
+            source2 = std::make_shared<DCOffset>(multiplier);
+        }
+        virtual double Sample()
+        {
+            return source1->Sample() * source2->Sample();
+        }
+    private:
+        std::shared_ptr<ISampleSource> source1;
+        std::shared_ptr<ISampleSource> source2;
+    };
+    
+    std::vector<std::shared_ptr<ISampleSource>> CreateConstSineArray(std::vector<double> frequencies, double sample_rate);
+    std::vector<std::shared_ptr<ISampleSource>> CreateDCOffsetArray(std::vector<double> offsets);
+    std::vector<std::shared_ptr<ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<double> multipliers);
+    std::vector<std::shared_ptr<ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<std::shared_ptr<ISampleSource>> source2_array);
 };
 
