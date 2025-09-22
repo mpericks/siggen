@@ -6,6 +6,7 @@
 //
 
 #include "base_waveforms.hpp"
+#include <cassert>
 
 namespace neato
 {

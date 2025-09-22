@@ -6,6 +6,7 @@
 //
 #include "RenderGraph.h"
 #include <iostream>
+#include "TestRenderer.hpp"
 
 int main(int argc, const char * argv[])
 {
@@ -24,11 +25,13 @@ int main(int argc, const char * argv[])
     create_params.channels_per_frame = 2;
     create_params.bits_per_channel = 16;
     create_params.sample_rate = 48000;
+
+    std::shared_ptr<neato::IRenderCallback> callback = std::make_shared<TestRenderer>(create_params);
     
     std::shared_ptr<neato::IRenderGraph> renderer;
     try
     {
-        renderer = neato::CreateRenderGraph(create_params);
+        renderer = neato::CreateRenderGraph(create_params, callback);
     }
     catch(std::runtime_error e)
     {

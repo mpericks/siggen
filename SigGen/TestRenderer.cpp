@@ -4,10 +4,13 @@
 //
 //  Created by Mike Erickson on 10/10/22.
 //
+#include <memory>
+#include <numbers>
 
+#include "envelope.hpp"
 #include "TestRenderer.hpp"
-#include "base_waveforms.hpp"
-#include "composite_waveforms.hpp"
+
+//#include "composite_waveforms.hpp"
 
 std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
@@ -164,6 +167,12 @@ std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, co
 
 TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_in)
 {
+
+}
+
+void TestRenderer::RendererCreated(const neato::audio_stream_description_t& stream_desc_in)
+{
+    _stream_desc = stream_desc_in;
     double center_freq = 300.0f;
     //signal = CreateFMBell(center_freq, stream_desc_in);
     //signal = CreateAdditiveBell(center_freq, stream_desc_in);
@@ -172,19 +181,19 @@ TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_
     //signal = CreateFlute(center_freq, stream_desc_in.sample_rate);
 }
 
-std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(neato::render_params_t params)
+std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(const neato::render_params_t& params)
 {
     std::shared_ptr<neato::IRenderReturn> error = neato::CreateRenderReturn();
 
-    SInt16 *left = (SInt16 *)params.ioData->mBuffers[0].mData;
+    //int16_t *left = (int16_t *)params.ioData->mBuffers[0].mData;
     
-    for (UInt32 frame = 0; frame < params.inNumberFrames; ++frame)
+    for (uint32_t frame = 0; frame < params.inNumberFrames; ++frame)
     {
-        left[frame] = (SInt16)(signal->Sample() * neato::PCM_Normalize * 0.3);
+        params.left_channel[frame] = (int16_t)(signal->Sample() * neato::PCM_Normalize * 0.3);
     }
 
     // Copy left channel to right channel
-    memcpy(params.ioData->mBuffers[1].mData, left, params.ioData->mBuffers[1].mDataByteSize);
+    memcpy(params.right_channel, params.left_channel, params.inNumberFrames * sizeof(int16_t*));
     
     return error;
 }

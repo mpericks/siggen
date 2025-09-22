@@ -15,14 +15,19 @@ typedef std::string utf8_string;
 #if defined (__APPLE__)
 #include "RenderGraph_Mac.h"
 #endif //__APPLE__
+#if defined(_WIN32) || defined(_WIN64)
+#include "RenderGraph_Win.h"
+#endif //_WIN32 || _WIN64
 
 namespace neato
 {
-    const uint32_t format_id_pcm = 1;
+    constexpr uint32_t format_id_pcm = 1;
+    constexpr uint32_t format_id_float_32 = 2
 
-    const uint32_t format_flag_signed_int = 1;
-    const uint32_t format_flag_packed = 2;
-    const uint32_t format_flag_non_interleaved = 4;
+    constexpr uint32_t format_flag_signed_int = 1;
+    constexpr uint32_t format_flag_packed = 2;
+    constexpr uint32_t format_flag_non_interleaved = 4;
+
     const float PCM_Normalize = 32767.0;
 
     struct PlatformRenderConstantsDictionary
@@ -63,8 +68,14 @@ namespace neato
         virtual std::shared_ptr<IRenderReturn> Stop() = 0;
     };
 
+    struct IRenderCallback
+    {
+        virtual std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& args) = 0;
+        virtual void RendererCreated(const neato::audio_stream_description_t& creation_params) = 0;
+    };
+
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();
     std::shared_ptr<IRenderReturn> CreateRenderReturn();
     std::shared_ptr<IRenderReturn> CreateRenderReturn(OS_RETURN, const utf8_string&);
-    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params);
+    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params, std::shared_ptr<neato::IRenderCallback> callback);
 };

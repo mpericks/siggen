@@ -10,6 +10,7 @@
 #include "audio_time.h"
 
 #include <vector>
+#include <cassert>
 
 namespace neato
 {

@@ -8,9 +8,9 @@
 #include <cmath>
 #include <numbers>
 #include "RenderGraph.h"
-#include "TestRenderer.hpp"
+//#include "TestRenderer.hpp"
 
-OSStatus RenderingCallback(void *inRefCon,
+OSStatus InternalRenderingCallback(void *inRefCon,
                            AudioUnitRenderActionFlags *ioActionFlags,
                            const AudioTimeStamp *inTimeStamp,
                            UInt32 inBusNumber,
@@ -122,9 +122,9 @@ std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn(OS_RETURN status
 class MacRenderGraph : public neato::IRenderGraph
 {
 public:
-    MacRenderGraph(const neato::audio_stream_description_t& params)
-    : generic_stream_desc(params)
-    , _renderImpl(params)
+    MacRenderGraph(const neato::audio_stream_description_t& params, std::shared_ptr<neato::IRenderCallback> callback)
+    : _generic_stream_desc(params)
+    , _renderImpl(callback)
     {
         OSErr err;
         _component_description.componentType = kAudioUnitType_Output;
@@ -147,7 +147,7 @@ public:
             throw error;
         }
 
-        _input.inputProc = RenderingCallback;
+        _input.inputProc = InternalRenderingCallback;
         _input.inputProcRefCon = this;
         err = AudioUnitSetProperty(_unit,
                                    kAudioUnitProperty_SetRenderCallback,
@@ -221,7 +221,7 @@ public:
     
     std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& params)
     {
-        return _renderImpl.Render(params);
+        return _renderImpl->Render(params);
     }
 private:
     AudioComponentDescription _component_description;
@@ -229,8 +229,8 @@ private:
     AudioUnit _unit;
     AURenderCallbackStruct _input;
     AudioStreamBasicDescription _stream_description;
-    neato::audio_stream_description_t generic_stream_desc;
-    TestRenderer _renderImpl;
+    neato::audio_stream_description_t _generic_stream_desc;
+    std::shared_ptr<neato::IRenderCallback> _renderImpl;
 
 };
 
@@ -239,9 +239,9 @@ std::shared_ptr<neato::PlatformRenderConstantsDictionary> neato::CreateRenderCon
     return std::make_shared<MacRenderConstants>();
 }
 
-std::shared_ptr<neato::IRenderGraph> neato::CreateRenderGraph(const neato::audio_stream_description_t& creation_params)
+std::shared_ptr<neato::IRenderGraph> neato::CreateRenderGraph(const neato::audio_stream_description_t& creation_params, std::shared_ptr<neato::IRenderCallback> callback)
 {
-    std::shared_ptr<neato::IRenderGraph> graph = std::make_shared<MacRenderGraph>(creation_params);
+    std::shared_ptr<neato::IRenderGraph> graph = std::make_shared<MacRenderGraph>(creation_params, std::shared_ptr<neato::IRenderCallback> callback);
     return graph;
 }
 
