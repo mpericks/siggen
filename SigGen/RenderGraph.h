@@ -22,7 +22,8 @@ typedef std::string utf8_string;
 namespace neato
 {
     constexpr uint32_t format_id_pcm = 1;
-    constexpr uint32_t format_id_float_32 = 2
+    constexpr uint32_t format_id_float_32 = 2;
+    constexpr uint32_t format_id_float_64 = 3;
 
     constexpr uint32_t format_flag_signed_int = 1;
     constexpr uint32_t format_flag_packed = 2;
@@ -72,6 +73,12 @@ namespace neato
     {
         virtual std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& args) = 0;
         virtual void RendererCreated(const neato::audio_stream_description_t& creation_params) = 0;
+        /// <summary>
+        ///  gets the number of frames that are in the buffer, ready to render. 
+        ///  a "frame" is a single set of samples for all channels for a single time slice
+        /// </summary>
+        /// <returns>the count of the number of frames that the callback object has buffered</returns>
+        virtual uint32_t GetFramesQueuedCount() = 0;
     };
 
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();

@@ -178,7 +178,7 @@ public:
 
         hr = _audio_client->Initialize(AUDCLNT_SHAREMODE_SHARED,
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
-            500 * 10000,
+            33 * 10000, // sounds at 30 fps latency?
             0,
             _mix_format,
             NULL);
@@ -190,7 +190,7 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        hr = _audio_client->GetBufferSize(&_buffer_size);
+        hr = _audio_client->GetBufferSize(&_buffer_frame_count);
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to get audio client buffer: hr = 0x{:x}", hr);
@@ -224,6 +224,7 @@ public:
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
 
+
         return error;
     }
 
@@ -243,18 +244,49 @@ private:
     neato::audio_stream_description_t CreateNeutralStreamDescription(const WAVEFORMATEX& wave_format)
     {
         neato::audio_stream_description_t ret_val;
-        //uint32_t format_id;
-        //uint32_t flags;
         ret_val.sample_rate = wave_format.nSamplesPerSec;
         ret_val.bits_per_channel = wave_format.wBitsPerSample;
         ret_val.channels_per_frame = wave_format.nChannels;
-        //uint32_t frames_per_packet;
-        //uint32_t bytes_per_frame;
-        //uint32_t bytes_per_packet;
-
-        if (wave_format.wFormatTag == WAVE_FORMAT_PCM ||
-            wave_format.wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
-            reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(&wave_format)->SubFormat == KSDATAFORMAT_SUBTYPE_PCM)
+        // The size of an audio frame is specified by the nBlockAlign member of the WAVEFORMATEX structure 
+        // that the client obtains by calling the IAudioClient::GetMixFormat method.
+        // https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudiorenderclient-getbuffer
+        ret_val.bytes_per_frame = wave_format.nBlockAlign; 
+        //ret_val.frames_per_packet;
+        //ret_val.bytes_per_packet;
+        if (wave_format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+        {
+            const WAVEFORMATEXTENSIBLE& wave_format_ext = (WAVEFORMATEXTENSIBLE&) wave_format;
+            if (::IsEqualGUID(wave_format_ext.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+            {
+                if (32 == wave_format.wBitsPerSample)
+                {
+                    ret_val.format_id = neato::format_id_float_32;
+                }
+                
+                else if (64 == wave_format.wBitsPerSample)
+                {
+                    ret_val.format_id = neato::format_id_float_64;
+                }
+                else
+                {
+                    // i'm not dealing with anything fancier than double
+                    std::string msg = "unrecognized floating point format.";
+                    _RPTF0(_CRT_ERROR, msg.c_str());
+                    throw std::exception(msg.c_str());
+                }
+            }
+            else if (::IsEqualGUID(wave_format_ext.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
+            {
+                if (wave_format.wBitsPerSample != 16)
+                {
+                    std::string msg = "Unknown PCM integer sample type";
+                    _RPTF0(_CRT_ERROR, msg.c_str());
+                    throw std::exception(msg.c_str());
+                }
+                ret_val.format_id = neato::format_id_pcm;
+            }
+        }
+        else if (wave_format.wFormatTag == WAVE_FORMAT_PCM)
         {
             if (wave_format.wBitsPerSample != 16)
             {
@@ -263,18 +295,29 @@ private:
                 throw std::exception(msg.c_str());
             }
             ret_val.format_id = neato::format_id_pcm;
-            ret_val.bytes_per_frame = (wave_format.wBitsPerSample / 8) * wave_format.nChannels;
         }
-        else if (wave_format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
-            (wave_format.wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
-                reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(&wave_format)->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+        else if (wave_format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
         {
-            ret_val.format_id = neato::format_id_pcm;
-            ret_val.bytes_per_frame = (wave_format.wBitsPerSample / 8) * wave_format.nChannels;
+            //vary between 1.0 and -1.0
+            if (32 == wave_format.wBitsPerSample)
+            {
+                ret_val.format_id = neato::format_id_float_32;
+            }
+            else if (64 == wave_format.wBitsPerSample)
+            {
+                ret_val.format_id = neato::format_id_float_64;
+            }
+            else
+            {
+                // don't know what this is
+                std::string msg = "unrecognized floating point format.";
+                _RPTF0(_CRT_ERROR, msg.c_str());
+                throw std::exception(msg.c_str());
+            }
         }
         else
         {
-            // not going to deal with floating point or other formats right now
+            // not going to deal with other formats right now
             std::string msg = "unrecognized device format.";
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
@@ -292,7 +335,7 @@ private:
     WAVEFORMATEX* _mix_format;
     neato::audio_stream_description_t _audio_stream_description;
     uint32_t _frame_size;
-    uint32_t _buffer_size;
+    uint32_t _buffer_frame_count;
     bool _stream_switch_in_progress;
     // a whole bunch of windows asynch events for handling stream switching, shutdown, and rendering
     HANDLE _shutdown_event;
