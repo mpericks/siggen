@@ -9,6 +9,10 @@
 
 using Microsoft::WRL::ComPtr;
 
+auto com_deleter = [](void* p) {
+    CoTaskMemFree(p);
+    };
+
 class WinRenderConstants : public  neato::PlatformRenderConstantsDictionary
 {
 public:
@@ -104,6 +108,8 @@ std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn(OS_RETURN status
     return std::make_shared<WinRenderReturn>(status, desc);
 }
 
+DWORD WINAPI RenderThread(void* param);
+
 class WinRenderGraph : public neato::IRenderGraph
 {
 public:
@@ -149,12 +155,20 @@ public:
         _stream_switch_complete_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
         if (_stream_switch_complete_event == NULL)
         {
+            std::string msg = std::format("Unable to create stream switch complete event: GetLastError() = 0x{:x}", GetLastError());
+            _RPTF0(_CRT_ERROR, msg.c_str());
+            throw std::exception(msg.c_str());
+        }
+
+        _stream_switch_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+        if (_stream_switch_complete_event == NULL)
+        {
             std::string msg = std::format("Unable to create stream switch event: GetLastError() = 0x{:x}", GetLastError());
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        hr = _endpoint->Activate(__uuidof(IAudioClient), CLSCTX_INPROC_SERVER, NULL, &_audio_client);
+        hr = _endpoint->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, NULL, &_audio_client);
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to activate audio client: hr = 0x{:x}", hr);
@@ -162,38 +176,34 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        hr = _audio_client->GetMixFormat(&_mix_format);
-        if (FAILED(hr))
+        WAVEFORMATEXTENSIBLE wave_format_in = CreateWaveFormat(_generic_stream_desc);
+        WAVEFORMATEX* p_wave_format_out = (WAVEFORMATEX*)::CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE));
+        std::unique_ptr<WAVEFORMATEX, void(*)(void*)> wave_format_cleanup(p_wave_format_out, ::CoTaskMemFree);
+
+        hr = _audio_client->GetCurrentSharedModeEnginePeriod(&p_wave_format_out, &_buffer_frame_count);
+
+        if(FAILED(hr))
         {
-            std::string msg = std::format("Unable to get mix format on audio client: hr = 0x{:x}", hr);
+            std::string msg = std::format("Error asking for a compatible format on audio client: hr = 0x{:x}", hr);
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        _frame_size = _mix_format->nBlockAlign;
+        _generic_stream_desc = CreateNeutralStreamDescription((WAVEFORMATEXTENSIBLE)*p_wave_format_out);
+        std::memcpy(&_mix_format, p_wave_format_out, sizeof(WAVEFORMATEXTENSIBLE));
 
-        _audio_stream_description = CreateNeutralStreamDescription(*_mix_format);
+        _frame_size = _mix_format.Format.nBlockAlign;
 
-        _renderImpl->RendererCreated(_audio_stream_description);
+        _renderImpl->RendererCreated(_generic_stream_desc);
 
-        hr = _audio_client->Initialize(AUDCLNT_SHAREMODE_SHARED,
-            AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
-            33 * 10000, // sounds at 30 fps latency?
-            0,
-            _mix_format,
-            NULL);
+        hr = _audio_client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                                                        _buffer_frame_count,
+                                                        (WAVEFORMATEX*)&_mix_format,
+                                                        NULL);
 
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to initialize audio client: hr = 0x{:x}", hr);
-            _RPTF0(_CRT_ERROR, msg.c_str());
-            throw std::exception(msg.c_str());
-        }
-
-        hr = _audio_client->GetBufferSize(&_buffer_frame_count);
-        if (FAILED(hr))
-        {
-            std::string msg = std::format("Unable to get audio client buffer: hr = 0x{:x}", hr);
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
@@ -224,6 +234,9 @@ public:
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
 
+        _thread = ::CreateThread(nullptr, 0, RenderThread, this, 0, nullptr);
+
+        HRESULT hr = _audio_client->Start();
 
         return error;
     }
@@ -231,39 +244,99 @@ public:
     virtual std::shared_ptr<neato::IRenderReturn> Stop()
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
-
+        _audio_client->Stop();
+        ::SetEvent(_shutdown_event);
         return error;
     }
 
-    std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& params)
+    void Render()
     {
-        return _renderImpl->Render(params);
+        neato::render_params_t params;
+        bool stillPlaying = true;
+        HANDLE wait_handles[3] = { _shutdown_event, _stream_switch_event, _audio_samples_needed_event };
+        HRESULT hr;
+
+        while (stillPlaying)
+        {
+            DWORD waitResult = WaitForMultipleObjects(3, wait_handles, FALSE, INFINITE); //WaitForSingleObject(_audio_samples_needed_event, INFINITE); // 
+            if (WAIT_FAILED == waitResult)
+            {
+                std::string msg = std::format("Unable to wait: GetlastError = 0x{:x}", GetLastError());
+                _RPTF0(_CRT_ERROR, msg.c_str());
+            }
+            switch (waitResult)
+            {
+            case WAIT_OBJECT_0 + 0:     // _ShutdownEvent
+                stillPlaying = false;       // We're done, exit the loop.
+                break;
+            case WAIT_OBJECT_0 + 1:     // _StreamSwitchEvent
+                //
+                //  We've received a stream switch request.
+                //
+                //  We need to stop the renderer, tear down the _AudioClient and _RenderClient objects and re-create them on the new.
+                //  endpoint if possible.  If this fails, abort the thread.
+                //
+                //if (!HandleStreamSwitchEvent())
+                //{
+                    stillPlaying = false;
+                //}
+                break;
+            case WAIT_OBJECT_0 + 2:     // Audio Samples Ready Event
+                //
+                //  We need to provide the next buffer of samples to the audio renderer.
+                //
+                UINT32 padding;
+                UINT32 frames_available_count;
+                //
+                //  We want to find out how much of the buffer *isn't* available (is padding).
+                //
+                hr = _audio_client->GetCurrentPadding(&padding);
+                if (SUCCEEDED(hr))
+                {
+                    //  Calculate the number of frames available.  
+                    frames_available_count = _buffer_frame_count - padding;
+
+                    hr = _render_client->GetBuffer(frames_available_count, &params.frame_buffer);
+                    if (SUCCEEDED(hr))
+                    {
+                        params.frame_count = frames_available_count;
+                        //
+                        //  Copy data from the render buffer to the output buffer and bump our render pointer.
+                        //
+                        _renderImpl->Render(params);
+                        hr = _render_client->ReleaseBuffer(frames_available_count, 0);
+                    }
+                }
+                break;
+            }
+        }
+
+        return;
     }
 
 private:
-    neato::audio_stream_description_t CreateNeutralStreamDescription(const WAVEFORMATEX& wave_format)
+    neato::audio_stream_description_t CreateNeutralStreamDescription(const WAVEFORMATEXTENSIBLE& wave_format)
     {
         neato::audio_stream_description_t ret_val;
-        ret_val.sample_rate = wave_format.nSamplesPerSec;
-        ret_val.bits_per_channel = wave_format.wBitsPerSample;
-        ret_val.channels_per_frame = wave_format.nChannels;
+        ret_val.sample_rate = wave_format.Format.nSamplesPerSec;
+        ret_val.bits_per_channel = wave_format.Format.wBitsPerSample;
+        ret_val.channels_per_frame = wave_format.Format.nChannels;
         // The size of an audio frame is specified by the nBlockAlign member of the WAVEFORMATEX structure 
         // that the client obtains by calling the IAudioClient::GetMixFormat method.
         // https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudiorenderclient-getbuffer
-        ret_val.bytes_per_frame = wave_format.nBlockAlign; 
+        ret_val.bytes_per_frame = wave_format.Format.nBlockAlign;
         //ret_val.frames_per_packet;
         //ret_val.bytes_per_packet;
-        if (wave_format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+        if (wave_format.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
         {
-            const WAVEFORMATEXTENSIBLE& wave_format_ext = (WAVEFORMATEXTENSIBLE&) wave_format;
-            if (::IsEqualGUID(wave_format_ext.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+            if (::IsEqualGUID(wave_format.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
             {
-                if (32 == wave_format.wBitsPerSample)
+                if (32 == wave_format.Format.wBitsPerSample)
                 {
                     ret_val.format_id = neato::format_id_float_32;
                 }
                 
-                else if (64 == wave_format.wBitsPerSample)
+                else if (64 == wave_format.Format.wBitsPerSample)
                 {
                     ret_val.format_id = neato::format_id_float_64;
                 }
@@ -275,9 +348,9 @@ private:
                     throw std::exception(msg.c_str());
                 }
             }
-            else if (::IsEqualGUID(wave_format_ext.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
+            else if (::IsEqualGUID(wave_format.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
             {
-                if (wave_format.wBitsPerSample != 16)
+                if (wave_format.Format.wBitsPerSample != 16)
                 {
                     std::string msg = "Unknown PCM integer sample type";
                     _RPTF0(_CRT_ERROR, msg.c_str());
@@ -285,10 +358,18 @@ private:
                 }
                 ret_val.format_id = neato::format_id_pcm;
             }
+            else if (::IsEqualGUID(wave_format.SubFormat, GUID_NULL))
+            {
+                // some chucklehead is making us guess
+                if (wave_format.Format.wBitsPerSample == 32)
+                {
+                    ret_val.format_id = neato::format_id_float_32;
+                }
+            }
         }
-        else if (wave_format.wFormatTag == WAVE_FORMAT_PCM)
+        else if (wave_format.Format.wFormatTag == WAVE_FORMAT_PCM)
         {
-            if (wave_format.wBitsPerSample != 16)
+            if (wave_format.Format.wBitsPerSample != 16)
             {
                 std::string msg = "Unknown PCM integer sample type";
                 _RPTF0(_CRT_ERROR, msg.c_str());
@@ -296,14 +377,14 @@ private:
             }
             ret_val.format_id = neato::format_id_pcm;
         }
-        else if (wave_format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+        else if (wave_format.Format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
         {
             //vary between 1.0 and -1.0
-            if (32 == wave_format.wBitsPerSample)
+            if (32 == wave_format.Format.wBitsPerSample)
             {
                 ret_val.format_id = neato::format_id_float_32;
             }
-            else if (64 == wave_format.wBitsPerSample)
+            else if (64 == wave_format.Format.wBitsPerSample)
             {
                 ret_val.format_id = neato::format_id_float_64;
             }
@@ -326,26 +407,64 @@ private:
         return ret_val;
     }
 
+    WAVEFORMATEXTENSIBLE CreateWaveFormat(const neato::audio_stream_description_t& stream_desc)
+    {
+        WAVEFORMATEXTENSIBLE wave_format;
+        wave_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        wave_format.Format.nSamplesPerSec = stream_desc.sample_rate;
+        wave_format.Format.wBitsPerSample = stream_desc.bits_per_channel;
+        wave_format.Format.nChannels = stream_desc.channels_per_frame;
+        wave_format.Format.nBlockAlign = stream_desc.bytes_per_frame;
+        wave_format.Format.nAvgBytesPerSec = wave_format.Format.nBlockAlign * wave_format.Format.nSamplesPerSec;
+        wave_format.Format.cbSize = 22;
+        // not really the right way to set the PCM format tag but see:
+        // https://learn.microsoft.com/en-us/windows/win32/coreaudio/device-formats
+        // >>> Some device drivers will report that they support a 1-channel or 2-channel PCM format 
+        // >>> if the format is specified by a stand-alone WAVEFORMATEX structure, 
+        // >>> but will reject the same format if it is specified by a WAVEFORMATEXTENSIBLE structure.
+        if (stream_desc.format_id == neato::format_id_pcm)
+        {
+            if (stream_desc.channels_per_frame < 3)
+            {
+                wave_format.Format.wFormatTag = WAVE_FORMAT_PCM;
+                wave_format.Format.cbSize = 0;
+            }
+            wave_format.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        }
+        else if (stream_desc.format_id == neato::format_id_float_32)
+        {
+            wave_format.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        }
+        return wave_format;
+    }
+
 private:
     ComPtr<IMMDeviceEnumerator> _device_enumerator;
     ComPtr<IMMDevice> _endpoint;
-    ComPtr<IAudioClient> _audio_client;
+    ComPtr<IAudioClient3> _audio_client;
     ComPtr<IAudioRenderClient> _render_client;
     ComPtr<IAudioSessionControl> _session_control;
-    WAVEFORMATEX* _mix_format;
-    neato::audio_stream_description_t _audio_stream_description;
+    neato::audio_stream_description_t _generic_stream_desc;
+    WAVEFORMATEXTENSIBLE _mix_format;
     uint32_t _frame_size;
     uint32_t _buffer_frame_count;
     bool _stream_switch_in_progress;
     // a whole bunch of windows asynch events for handling stream switching, shutdown, and rendering
+    HANDLE _thread;
     HANDLE _shutdown_event;
     HANDLE _audio_samples_needed_event;
     HANDLE _stream_switch_event;           // Set when the current session is disconnected or the default device changes.
     HANDLE _stream_switch_complete_event;  // Set when the default device has been changed internally.
 
-    neato::audio_stream_description_t _generic_stream_desc;
     std::shared_ptr<neato::IRenderCallback> _renderImpl;
 };
+
+DWORD WINAPI RenderThread(void* param)
+{
+    WinRenderGraph* render_graph = (WinRenderGraph*)param;
+    render_graph->Render();
+    return 0;
+}
 
 std::shared_ptr<neato::PlatformRenderConstantsDictionary> neato::CreateRenderConstantsDictionary()
 {

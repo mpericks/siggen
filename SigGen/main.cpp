@@ -19,9 +19,9 @@ int main(int argc, const char * argv[])
                           | render_constants->Flag(neato::format_flag_signed_int)
                           | render_constants->Flag(neato::format_flag_packed)
                           | render_constants->Flag(neato::format_flag_non_interleaved);
-    create_params.bytes_per_packet = 2;
+    //create_params.bytes_per_packet = 2;
     create_params.bytes_per_frame = 2;
-    create_params.frames_per_packet = 1;
+    //create_params.frames_per_packet = 1;
     create_params.channels_per_frame = 2;
     create_params.bits_per_channel = 16;
     create_params.sample_rate = 48000;
@@ -46,4 +46,5 @@ int main(int argc, const char * argv[])
 
     return ret_val;
 }
+
 

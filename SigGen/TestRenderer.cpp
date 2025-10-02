@@ -184,16 +184,16 @@ void TestRenderer::RendererCreated(const neato::audio_stream_description_t& stre
 std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(const neato::render_params_t& params)
 {
     std::shared_ptr<neato::IRenderReturn> error = neato::CreateRenderReturn();
-
-    //int16_t *left = (int16_t *)params.ioData->mBuffers[0].mData;
     
-    for (uint32_t frame = 0; frame < params.inNumberFrames; ++frame)
+    for (uint32_t buffer_offset = 0; buffer_offset < params.frame_count * _stream_desc.bytes_per_frame; buffer_offset += _stream_desc.bytes_per_frame)
     {
-        params.left_channel[frame] = (int16_t)(signal->Sample() * neato::PCM_Normalize * 0.3);
+        float sample = (float)(signal->Sample());
+        float* buffer = (float*)&params.frame_buffer[buffer_offset];
+        for (uint32_t channel = 0; channel < _stream_desc.channels_per_frame; channel++)
+        {
+            buffer[channel] = sample;
+        }
     }
-
-    // Copy left channel to right channel
-    memcpy(params.right_channel, params.left_channel, params.inNumberFrames * sizeof(int16_t*));
     
     return error;
 }

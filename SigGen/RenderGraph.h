@@ -44,9 +44,9 @@ namespace neato
         double sample_rate;
         uint32_t bits_per_channel;
         uint32_t channels_per_frame;
-        uint32_t frames_per_packet;
+        //uint32_t frames_per_packet;
         uint32_t bytes_per_frame;
-        uint32_t bytes_per_packet;
+        //uint32_t bytes_per_packet;
 #if PLATFORM_FORMAT_MEMBERS_REQUIRED == 1
         PlatformAudioFormatMembers platform_specific_info;
 #endif
@@ -64,7 +64,6 @@ namespace neato
 
     struct IRenderGraph
     {
-        virtual std::shared_ptr<IRenderReturn> Render(const render_params_t& args) = 0;
         virtual std::shared_ptr<IRenderReturn> Start() = 0;
         virtual std::shared_ptr<IRenderReturn> Stop() = 0;
     };
@@ -78,7 +77,7 @@ namespace neato
         ///  a "frame" is a single set of samples for all channels for a single time slice
         /// </summary>
         /// <returns>the count of the number of frames that the callback object has buffered</returns>
-        virtual uint32_t GetFramesQueuedCount() = 0;
+        //virtual uint32_t GetFramesQueuedCount() = 0;
     };
 
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();

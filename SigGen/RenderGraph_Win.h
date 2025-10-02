@@ -16,8 +16,7 @@ namespace neato
 
     struct render_params_t
     {
-        uint32_t inNumberFrames;
-        float* left_channel;
-        float* right_channel;
+        uint32_t frame_count;
+        uint8_t* frame_buffer;
     };
 };
