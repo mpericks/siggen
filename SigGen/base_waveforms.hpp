@@ -127,6 +127,7 @@ namespace neato
     {
     public:
         ConstSaw(float frequency_in, float sample_rate_in, bool negative_slope_in)
+            :index(0)
         {
             uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);
             saw_table.reserve(samples_per_cycle);
