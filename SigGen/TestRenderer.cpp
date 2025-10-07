@@ -157,7 +157,7 @@ std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, con
 std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     std::shared_ptr<neato::ISampleSource> bell1 = CreateAdditiveBell(center_freq, stream_desc_in);
-    std::shared_ptr<neato::ISampleSource> bell2 = CreateAdditiveBell(center_freq * 1.554, stream_desc_in);
+    std::shared_ptr<neato::ISampleSource> bell2 = CreateAdditiveBell(center_freq * 0.5, stream_desc_in);
     std::shared_ptr<neato::ISampleSource> bell3 = CreateAdditiveBell(center_freq * 2.0, stream_desc_in);
     std::shared_ptr<neato::ISampleSource> bell4 = CreateAdditiveBell(center_freq * 4.0, stream_desc_in);
     std::vector<std::shared_ptr<neato::ISampleSource>> signals = {bell1, bell2, bell3, bell4};

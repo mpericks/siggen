@@ -10,7 +10,7 @@
 
 int main(int argc, const char * argv[])
 {
-
+    ::CoInitialize(nullptr);
     int ret_val = 0;
     neato::audio_stream_description_t create_params;
     std::shared_ptr<neato::PlatformRenderConstantsDictionary> render_constants = neato::CreateRenderConstantsDictionary();
@@ -19,9 +19,7 @@ int main(int argc, const char * argv[])
                           | render_constants->Flag(neato::format_flag_signed_int)
                           | render_constants->Flag(neato::format_flag_packed)
                           | render_constants->Flag(neato::format_flag_non_interleaved);
-    //create_params.bytes_per_packet = 2;
     create_params.bytes_per_frame = 2;
-    //create_params.frames_per_packet = 1;
     create_params.channels_per_frame = 2;
     create_params.bits_per_channel = 16;
     create_params.sample_rate = 48000;
@@ -41,7 +39,7 @@ int main(int argc, const char * argv[])
     
     std::shared_ptr<neato::IRenderReturn> ret = renderer->Start();
     std::cout << "Press enter to stop annoying sound" << std::endl;
-    getchar();
+    int dummy = getchar();
     renderer->Stop();
 
     return ret_val;

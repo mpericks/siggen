@@ -1,3 +1,4 @@
+#include <vector>
 #include <crtdbg.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
@@ -9,17 +10,28 @@
 
 using Microsoft::WRL::ComPtr;
 
-auto com_deleter = [](void* p) {
-    CoTaskMemFree(p);
-    };
+using com_memory_ptr_t = std::unique_ptr<void, decltype(&CoTaskMemFree)>;
+using auto_handle_t = std::unique_ptr<void, decltype(&CloseHandle)>;
 
 class WinRenderConstants : public  neato::PlatformRenderConstantsDictionary
 {
 public:
-    virtual uint32_t Format(uint32_t format) const
+    virtual uint32_t Format(const uint32_t format) const
     {
-        // TODO: finish
-        return WAVE_FORMAT_PCM;// kAudioFormatLinearPCM;
+        uint32_t format_out = WAVE_FORMAT_PCM;
+        switch (format)
+        {
+        case neato::format_id_pcm:
+            format_out = WAVE_FORMAT_PCM;
+            break;
+        case neato::format_id_float_32:
+			format_out = WAVE_FORMAT_IEEE_FLOAT;
+			break;
+        default:
+            format_out = WAVE_FORMAT_IEEE_FLOAT;
+            break;
+        }
+        return format_out;
     }
     virtual uint32_t Flag(uint32_t flag) const
     {
@@ -116,11 +128,25 @@ public:
     WinRenderGraph(const neato::audio_stream_description_t& params, std::shared_ptr<neato::IRenderCallback> callback)
         : _generic_stream_desc(params)
         , _stream_switch_in_progress(false)
+        , _thread(nullptr, &::CloseHandle)
+        , _shutdown_event(nullptr, &::CloseHandle)
+        , _audio_samples_needed_event(nullptr, &::CloseHandle)
+        , _stream_switch_event(nullptr, &::CloseHandle)
+        , _stream_switch_complete_event(nullptr, &::CloseHandle)
         , _renderImpl(callback)
     {
-        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+        Initialize();
+    }
 
-        hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_device_enumerator));
+    virtual ~WinRenderGraph()
+    {
+        Stop();
+    }
+
+    void Initialize()
+    {
+        _device_enumerator.Reset();
+        HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_device_enumerator));
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to instantiate device enumerator: hr = 0x{:x}", hr);
@@ -128,7 +154,7 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        hr = _device_enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &_endpoint);
+        hr = _device_enumerator->GetDefaultAudioEndpoint(eRender, eConsole, _endpoint.ReleaseAndGetAddressOf());
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to get default device: hr = 0x{:x}", hr);
@@ -136,39 +162,39 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        _shutdown_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-        if (_shutdown_event == NULL)
+        _shutdown_event.reset(CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
+        if (!_shutdown_event)
         {
             std::string msg = std::format("Unable to create shutdown event: GetLastError() = 0x{:x}", GetLastError());
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        _audio_samples_needed_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-        if (_audio_samples_needed_event == NULL)
+        _audio_samples_needed_event.reset(CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
+        if (!_audio_samples_needed_event)
         {
             std::string msg = std::format("Unable to create samples needed event: GetLastError() = 0x{:x}", GetLastError());
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        _stream_switch_complete_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-        if (_stream_switch_complete_event == NULL)
+        _stream_switch_complete_event.reset(CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
+        if (!_stream_switch_complete_event)
         {
             std::string msg = std::format("Unable to create stream switch complete event: GetLastError() = 0x{:x}", GetLastError());
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        _stream_switch_event = CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-        if (_stream_switch_complete_event == NULL)
+        _stream_switch_event.reset(CreateEventEx(NULL, NULL, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
+        if (!_stream_switch_event)
         {
             std::string msg = std::format("Unable to create stream switch event: GetLastError() = 0x{:x}", GetLastError());
             _RPTF0(_CRT_ERROR, msg.c_str());
             throw std::exception(msg.c_str());
         }
 
-        hr = _endpoint->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, NULL, &_audio_client);
+        hr = _endpoint->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, NULL, (void**)_audio_client.ReleaseAndGetAddressOf());
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to activate audio client: hr = 0x{:x}", hr);
@@ -178,11 +204,11 @@ public:
 
         WAVEFORMATEXTENSIBLE wave_format_in = CreateWaveFormat(_generic_stream_desc);
         WAVEFORMATEX* p_wave_format_out = (WAVEFORMATEX*)::CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE));
-        std::unique_ptr<WAVEFORMATEX, void(*)(void*)> wave_format_cleanup(p_wave_format_out, ::CoTaskMemFree);
+        com_memory_ptr_t wave_format_cleanup(p_wave_format_out, &::CoTaskMemFree);
 
         hr = _audio_client->GetCurrentSharedModeEnginePeriod(&p_wave_format_out, &_buffer_frame_count);
 
-        if(FAILED(hr))
+        if (FAILED(hr))
         {
             std::string msg = std::format("Error asking for a compatible format on audio client: hr = 0x{:x}", hr);
             _RPTF0(_CRT_ERROR, msg.c_str());
@@ -208,7 +234,7 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        hr = _audio_client->SetEventHandle(_audio_samples_needed_event);
+        hr = _audio_client->SetEventHandle(_audio_samples_needed_event.get());
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to set ready event: hr = 0x{:x}", hr);
@@ -216,7 +242,7 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        hr = _audio_client->GetService(IID_PPV_ARGS(&_render_client));
+        hr = _audio_client->GetService(IID_PPV_ARGS(_render_client.ReleaseAndGetAddressOf()));
         if (FAILED(hr))
         {
             std::string msg = std::format("Unable to get new render client: hr = 0x{:x}", hr);
@@ -225,16 +251,11 @@ public:
         }
     }
 
-    virtual ~WinRenderGraph()
-    {
-
-    }
-
     virtual std::shared_ptr<neato::IRenderReturn> Start()
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
 
-        _thread = ::CreateThread(nullptr, 0, RenderThread, this, 0, nullptr);
+        _thread.reset(::CreateThread(nullptr, 0, RenderThread, this, 0, nullptr));
 
         HRESULT hr = _audio_client->Start();
 
@@ -244,8 +265,12 @@ public:
     virtual std::shared_ptr<neato::IRenderReturn> Stop()
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
+
         _audio_client->Stop();
-        ::SetEvent(_shutdown_event);
+
+        ::SetEvent(_shutdown_event.get());
+        WaitForSingleObject(_thread.get(), INFINITE);
+
         return error;
     }
 
@@ -253,12 +278,15 @@ public:
     {
         neato::render_params_t params;
         bool stillPlaying = true;
-        HANDLE wait_handles[3] = { _shutdown_event, _stream_switch_event, _audio_samples_needed_event };
+        std::vector<HANDLE> wait_handles = { _shutdown_event.get(), _stream_switch_event.get(), _audio_samples_needed_event.get()};
         HRESULT hr;
+        constexpr uint32_t shutdown_triggered = WAIT_OBJECT_0 + 0;
+        constexpr uint32_t stream_switch_triggered = WAIT_OBJECT_0 + 1;
+        constexpr uint32_t audio_samples_requested = WAIT_OBJECT_0 + 2;
 
         while (stillPlaying)
         {
-            DWORD waitResult = WaitForMultipleObjects(3, wait_handles, FALSE, INFINITE); //WaitForSingleObject(_audio_samples_needed_event, INFINITE); // 
+            DWORD waitResult = WaitForMultipleObjects(wait_handles.size(), wait_handles.data(), FALSE, INFINITE);
             if (WAIT_FAILED == waitResult)
             {
                 std::string msg = std::format("Unable to wait: GetlastError = 0x{:x}", GetLastError());
@@ -266,48 +294,39 @@ public:
             }
             switch (waitResult)
             {
-            case WAIT_OBJECT_0 + 0:     // _ShutdownEvent
-                stillPlaying = false;       // We're done, exit the loop.
-                break;
-            case WAIT_OBJECT_0 + 1:     // _StreamSwitchEvent
-                //
-                //  We've received a stream switch request.
-                //
-                //  We need to stop the renderer, tear down the _AudioClient and _RenderClient objects and re-create them on the new.
-                //  endpoint if possible.  If this fails, abort the thread.
-                //
-                //if (!HandleStreamSwitchEvent())
-                //{
-                    stillPlaying = false;
-                //}
-                break;
-            case WAIT_OBJECT_0 + 2:     // Audio Samples Ready Event
-                //
-                //  We need to provide the next buffer of samples to the audio renderer.
-                //
-                UINT32 padding;
-                UINT32 frames_available_count;
-                //
-                //  We want to find out how much of the buffer *isn't* available (is padding).
-                //
-                hr = _audio_client->GetCurrentPadding(&padding);
-                if (SUCCEEDED(hr))
-                {
-                    //  Calculate the number of frames available.  
-                    frames_available_count = _buffer_frame_count - padding;
+			case shutdown_triggered:
+				stillPlaying = false;       // exit the loop.
+				break;
+			case stream_switch_triggered:
+				//  We've received a stream switch request.
+				//
+				//  We need to stop the renderer, tear down the _audio_client and _render_cClient objects and re-create them on the new
+				//  endpoint if possible.  If this fails, abort the thread.
+				//
+				//if (!HandleStreamSwitchEvent())
+				//{
+				stillPlaying = false;
+				//}
+				break;
+			case audio_samples_requested:
 
-                    hr = _render_client->GetBuffer(frames_available_count, &params.frame_buffer);
-                    if (SUCCEEDED(hr))
-                    {
-                        params.frame_count = frames_available_count;
-                        //
-                        //  Copy data from the render buffer to the output buffer and bump our render pointer.
-                        //
-                        _renderImpl->Render(params);
-                        hr = _render_client->ReleaseBuffer(frames_available_count, 0);
-                    }
-                }
-                break;
+				uint32_t padding;
+
+				// "padding" is specified in number of frames
+				hr = _audio_client->GetCurrentPadding(&padding);
+				if (SUCCEEDED(hr))
+				{
+					//  Calculate the number of frames available.
+                    const uint32_t frames_available_count = _buffer_frame_count - padding;
+					hr = _render_client->GetBuffer(frames_available_count, &params.frame_buffer);
+					if (SUCCEEDED(hr))
+					{
+						params.frame_count = frames_available_count;
+						_renderImpl->Render(params);
+						hr = _render_client->ReleaseBuffer(frames_available_count, 0);
+					}
+				}
+				break;
             }
         }
 
@@ -325,8 +344,7 @@ private:
         // that the client obtains by calling the IAudioClient::GetMixFormat method.
         // https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudiorenderclient-getbuffer
         ret_val.bytes_per_frame = wave_format.Format.nBlockAlign;
-        //ret_val.frames_per_packet;
-        //ret_val.bytes_per_packet;
+
         if (wave_format.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
         {
             if (::IsEqualGUID(wave_format.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
@@ -449,12 +467,11 @@ private:
     uint32_t _frame_size;
     uint32_t _buffer_frame_count;
     bool _stream_switch_in_progress;
-    // a whole bunch of windows asynch events for handling stream switching, shutdown, and rendering
-    HANDLE _thread;
-    HANDLE _shutdown_event;
-    HANDLE _audio_samples_needed_event;
-    HANDLE _stream_switch_event;           // Set when the current session is disconnected or the default device changes.
-    HANDLE _stream_switch_complete_event;  // Set when the default device has been changed internally.
+    auto_handle_t _thread;
+    auto_handle_t _shutdown_event;
+    auto_handle_t _audio_samples_needed_event;
+    auto_handle_t _stream_switch_event;           // Set when the current session is disconnected or the default device changes.
+    auto_handle_t _stream_switch_complete_event;  // Set when the default device has been changed internally.
 
     std::shared_ptr<neato::IRenderCallback> _renderImpl;
 };
