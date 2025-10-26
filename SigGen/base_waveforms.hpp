@@ -244,6 +244,56 @@ namespace neato
     private:
         std::vector<std::shared_ptr<ISampleSource>> sample_sources;
     };
+
+    class MutableSummer : public ISampleSource
+    {
+    public:
+        MutableSummer() = default;
+        MutableSummer(const std::vector<std::shared_ptr<ISampleSource>>& sample_sources_in) : sample_sources(sample_sources_in)
+        {
+
+        }
+        MutableSummer(std::vector<std::shared_ptr<ISampleSource>>&& sample_sources_in) : sample_sources(std::move(sample_sources_in))
+        {
+
+        }
+        void AddSource(std::shared_ptr<ISampleSource> source)
+        {
+            sample_sources.push_back(source);
+        }
+        void ClearSources()
+        {
+            sample_sources.clear();
+        }
+        void RemoveSource(std::shared_ptr<ISampleSource> source)
+        {
+            auto it = std::find(sample_sources.begin(), sample_sources.end(), source);
+            if (it != sample_sources.end())
+            {
+                sample_sources.erase(it);
+            }
+        }
+        uint32_t SourceCount() const
+        {
+            return static_cast<uint32_t>(sample_sources.size());
+        }
+        bool HasSource(std::shared_ptr<ISampleSource> source) const
+        {
+            auto it = std::find(sample_sources.begin(), sample_sources.end(), source);
+            return (it != sample_sources.end());
+        }
+        virtual double Sample()
+        {
+            double ret_val = 0;
+            std::for_each(sample_sources.begin(), sample_sources.end(), [&ret_val](std::shared_ptr<ISampleSource>& sampler)
+            {
+                ret_val += sampler->Sample();
+            });
+            return ret_val;
+        }
+    private:
+        std::vector<std::shared_ptr<ISampleSource>> sample_sources;
+    };
     
     class SampleMultiplier : public ISampleSource
     {

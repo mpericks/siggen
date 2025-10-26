@@ -36,6 +36,9 @@
     <ClInclude Include="SigGen\RenderGraph_Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SigGen\note.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SigGen\base_waveforms.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SigGen\RenderGraph_Win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SigGen\note.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

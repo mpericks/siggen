@@ -9,6 +9,7 @@
 
 #include "envelope.hpp"
 #include "TestRenderer.hpp"
+#include "note.h"
 
 //#include "composite_waveforms.hpp"
 
@@ -88,6 +89,32 @@ std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sam
     
     //make a modulated signal
     return std::make_shared<neato::SampleMultiplier>(raw_sig, env_temp);
+}
+
+std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, double sample_rate)
+{
+    std::vector<neato::sequence_element> elements;
+    std::vector<double> frequencies = { 233.08
+        ,261.63
+        ,293.66
+        ,311.13
+        ,349.23
+        ,392.00
+        ,440.00
+        ,466.16 };
+
+    uint8_t i = 0;
+    for (double frequency : frequencies)
+    {
+        neato::sequence_element elem;
+        elem.base_sound = CreateFlute(frequency, sample_rate);
+        elem.duration = 1.0;
+        elem.delay_to_start = (double)i * 1.2;
+        elements.push_back(elem);
+        i++;
+    }
+    
+    return neato::CreateSequence(elements, sample_rate);
 }
 
 std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
@@ -177,8 +204,9 @@ void TestRenderer::RendererCreated(const neato::audio_stream_description_t& stre
     //signal = CreateFMBell(center_freq, stream_desc_in);
     //signal = CreateAdditiveBell(center_freq, stream_desc_in);
     //signal = CreateHarmonicBells(center_freq, stream_desc_in);
-    signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
+    //signal = CreateCompositeSignalWithBellEnvelopes(center_freq, stream_desc_in);
     //signal = CreateFlute(center_freq, stream_desc_in.sample_rate);
+    signal = CreateFluteSequence(center_freq, stream_desc_in.sample_rate);
 }
 
 std::shared_ptr<neato::IRenderReturn> TestRenderer::Render(const neato::render_params_t& params)
