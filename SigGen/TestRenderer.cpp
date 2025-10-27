@@ -94,7 +94,8 @@ std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sam
 std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, double sample_rate)
 {
     std::vector<neato::sequence_element> elements;
-    std::vector<double> frequencies = { 233.08
+    std::vector<double> frequencies = { 
+         233.08
         ,261.63
         ,293.66
         ,311.13
@@ -106,15 +107,49 @@ std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, do
     uint8_t i = 0;
     for (double frequency : frequencies)
     {
+        std::shared_ptr<neato::ISampleSource> base_sound = CreateFlute(frequency, sample_rate);
+        double duration = 1.0;
+        std::shared_ptr elem_base = neato::CreateSoundWithDuration(base_sound, duration, sample_rate);
         neato::sequence_element elem;
-        elem.base_sound = CreateFlute(frequency, sample_rate);
-        elem.duration = 1.0;
+        elem.base_sound = elem_base;
         elem.delay_to_start = (double)i * 1.2;
         elements.push_back(elem);
         i++;
     }
+
+    std::vector<neato::sequence_element> elements_down;
+    i = 0;
+    for (auto iter = frequencies.rbegin(); iter != frequencies.rend(); iter++)
+    {
+        double frequency = *iter;
+        std::shared_ptr<neato::ISampleSource> base_sound = CreateFlute(frequency, sample_rate);
+        double duration = 1.0;
+        std::shared_ptr elem_base = neato::CreateSoundWithDuration(base_sound, duration, sample_rate);
+        neato::sequence_element elem;
+        elem.base_sound = elem_base;
+        elem.delay_to_start = (double)i * 1.2;
+        elements_down.push_back(elem);
+        i++;
+    }
     
-    return neato::CreateSequence(elements, sample_rate);
+    auto seq1 =  neato::CreateSequence(elements, sample_rate);
+    auto seq2 = neato::CreateSequence(elements_down, sample_rate);
+
+    std::vector<neato::sequence_element> final_elements;
+
+    neato::sequence_element elem_up;
+    elem_up.base_sound = seq1;
+    elem_up.delay_to_start = 0.0;
+
+    neato::sequence_element elem_down;
+    elem_down.base_sound = seq2;
+    elem_down.delay_to_start = seq1->Duration();
+
+    final_elements.push_back(elem_up);
+    final_elements.push_back(elem_down);
+
+    return neato::CreateSequence(final_elements, sample_rate);
+
 }
 
 std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
