@@ -16,7 +16,7 @@
 std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     //frequency of the carrier gets modulated by a saw with a constant gain
-    std::shared_ptr<neato::ISampleSource> saw_temp = std::make_shared<neato::ConstSaw>(1.4f * center_freq, stream_desc_in.sample_rate, false);
+    std::shared_ptr<neato::ISampleSource> saw_temp = std::make_shared<neato::ConstSaw>(1.4 * center_freq, stream_desc_in.sample_rate, false);
     
     //make a modualted signal with the saw and the gain
     std::shared_ptr<neato::ISampleSource> saw_with_gain = std::make_shared<neato::SampleMultiplier>(saw_temp, 160.0);
@@ -182,9 +182,9 @@ std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(dou
 std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     std::vector<double> frequency_multiples = {0.56, 0.92, 1.19, 1.71, 2, 2.74, 3, 3.76, 4.07, 5.50};
+    const std::vector<double>::size_type signal_count = frequency_multiples.size();
     std::vector<double> frequencies = neato::FrequenciesFromMultiples(center_freq, std::move(frequency_multiples));
     std::vector<std::shared_ptr<neato::ISampleSource>> sine_waves = neato::CreateConstSineArray(frequencies, stream_desc_in.sample_rate);
-    const std::vector<double>::size_type signal_count = frequency_multiples.size();
     
     // make the envelope scale values
     constexpr double fundamental_gain = 0.5;
@@ -227,7 +227,7 @@ std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, co
     return composite_signal;
 }
 
-TestRenderer::TestRenderer(const neato::audio_stream_description_t& stream_desc_in)
+TestRenderer::TestRenderer()
 {
 
 }

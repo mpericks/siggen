@@ -24,7 +24,7 @@ namespace neato
 class LinearEnvelopeSegment : public neato::IEnvelopeSegment
 {
 public:
-    LinearEnvelopeSegment(float sample_rate_in, float gain_start_value, float gain_target_value, float gain_duration_time, neato::GainSegmentId id)
+    LinearEnvelopeSegment(double sample_rate_in, double gain_start_value, double gain_target_value, double gain_duration_time, neato::GainSegmentId id)
         : sample_time_accumulator(sample_rate_in)
         , current_segment_sample_index(0)
         , p_callback(nullptr)
@@ -51,7 +51,7 @@ public:
     }
     virtual double Sample()
     {
-        float return_gain = gains_for_each_sample[current_segment_sample_index];
+        double return_gain = gains_for_each_sample[current_segment_sample_index];
         current_segment_sample_index += 1;
         if (current_segment_sample_index >= gains_for_each_sample.size())
         {
@@ -112,7 +112,7 @@ public:
     }
     virtual double Sample()
     {
-        float gain = 0.0;
+        double gain = 0.0;
         if (nullptr != current_segment)
         {
             gain = current_segment->Sample();

@@ -14,7 +14,7 @@ namespace neato
 	struct sequence_element
 	{
 		std::shared_ptr<ISampleSourceWithDuration> base_sound;
-		double delay_to_start;
+		double delay_to_start = 0;;
 	};
 
     std::shared_ptr<ISampleSourceWithDuration> CreateSoundWithDuration(std::shared_ptr<ISampleSource> source, double duration, double sample_rate);

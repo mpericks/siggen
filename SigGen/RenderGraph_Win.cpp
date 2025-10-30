@@ -286,7 +286,7 @@ public:
 
         while (stillPlaying)
         {
-            DWORD waitResult = WaitForMultipleObjects(wait_handles.size(), wait_handles.data(), FALSE, INFINITE);
+            DWORD waitResult = WaitForMultipleObjects((DWORD)wait_handles.size(), wait_handles.data(), FALSE, INFINITE);
             if (WAIT_FAILED == waitResult)
             {
                 std::string msg = std::format("Unable to wait: GetlastError = 0x{:x}", GetLastError());
@@ -429,7 +429,7 @@ private:
     {
         WAVEFORMATEXTENSIBLE wave_format;
         wave_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        wave_format.Format.nSamplesPerSec = stream_desc.sample_rate;
+        wave_format.Format.nSamplesPerSec = (DWORD)stream_desc.sample_rate;
         wave_format.Format.wBitsPerSample = stream_desc.bits_per_channel;
         wave_format.Format.nChannels = stream_desc.channels_per_frame;
         wave_format.Format.nBlockAlign = stream_desc.bytes_per_frame;

@@ -13,7 +13,7 @@
 class TestRenderer : public neato::IRenderCallback
 {
 public:
-    TestRenderer(const neato::audio_stream_description_t& stream_desc);
+    TestRenderer();
     virtual std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& params) override;
     virtual void RendererCreated(const neato::audio_stream_description_t& creation_params) override;
 private:

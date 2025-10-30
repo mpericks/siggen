@@ -39,13 +39,13 @@ namespace neato
 
     struct audio_stream_description_t
     {
-        uint32_t format_id;
-        uint32_t flags;
-        double sample_rate;
-        uint32_t bits_per_channel;
-        uint32_t channels_per_frame;
+        uint32_t format_id = 0;
+        uint32_t flags = 0;
+        double sample_rate = 0.0;
+        uint32_t bits_per_channel = 0;
+        uint32_t channels_per_frame = 0;
         //uint32_t frames_per_packet;
-        uint32_t bytes_per_frame;
+        uint32_t bytes_per_frame = 0;
         //uint32_t bytes_per_packet;
 #if PLATFORM_FORMAT_MEMBERS_REQUIRED == 1
         PlatformAudioFormatMembers platform_specific_info;

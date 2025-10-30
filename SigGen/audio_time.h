@@ -12,9 +12,13 @@ namespace neato
     class AudioTime
     {
     public:
-        AudioTime(double sample_rate_in):sample_rate(sample_rate_in), accumulated_samples(0.0)
+        AudioTime(double sample_rate_in)
+            : sample_rate(sample_rate_in)
+            , accumulated_samples(0.0)
+            , seconds(0.0)
+            , seconds_per_sample(1.0 / sample_rate_in)
         {
-            seconds_per_sample = ((double)1.0) / sample_rate;
+            
         }
         AudioTime() = delete;
         double Increment()

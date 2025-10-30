@@ -15,7 +15,7 @@
 #include <vector>
 #include <random>
 
-constexpr static const float two_pi = std::numbers::pi * 2.0f;
+constexpr static const double two_pi = std::numbers::pi * 2.0;
 
 namespace neato
 {
@@ -31,7 +31,7 @@ namespace neato
     class AudioRadians : public ISampleSource
     {
     public:
-        AudioRadians(float frequency_in, float sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        AudioRadians(double frequency_in, double sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
         : value(0.0f)
         , sample_rate(sample_rate_in)
         , frequency_modulator(frequency_modulator_in)
@@ -59,19 +59,19 @@ namespace neato
             frequency = new_frequency;
             increment = two_pi * new_frequency / sample_rate;
         }
-        float Value() const {return value;}
+        double Value() const {return value;}
     private:
         double value;
         double increment;
         double frequency;
         std::shared_ptr<ISampleSource> frequency_modulator;
-        const float sample_rate;
+        const double sample_rate;
     };
 
     class MutableSine : public ISampleSource
     {
     public:
-        MutableSine(float frequency_in, float sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        MutableSine(double frequency_in, double sample_rate_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
         : theta(frequency_in, sample_rate_in, frequency_modulator_in), value(0.0f)
         {
             
@@ -79,10 +79,10 @@ namespace neato
         virtual double Sample()
         {
             double ret_value = value;
-            value = std::sinf(theta.Sample());
+            value = std::sin(theta.Sample());
             return ret_value;
         }
-        float Value() const { return value;}
+        double Value() const { return value;}
         virtual double getFrequency() {return theta.getFrequency();}
         virtual void setFrequency(double new_frequency)
         {
@@ -96,19 +96,19 @@ namespace neato
     class ConstSine : public ISampleSource
     {
     public:
-        ConstSine(float frequency_in, float sample_rate_in) : index(0)
+        ConstSine(double frequency_in, double sample_rate_in) : index(0)
         {
             uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);// + 1;
             sine_table.reserve(samples_per_cycle);
             AudioRadians theta(frequency_in, sample_rate_in, std::shared_ptr<ISampleSource>());
             for (uint32_t i = 0; i < samples_per_cycle; i++)
             {
-                sine_table.push_back(std::sinf(theta.Sample()));
+                sine_table.push_back(std::sin(theta.Sample()));
             }
         }
         double Sample()
         {
-            float value = sine_table[index];
+            double value = sine_table[index];
             index += 1;
             if (index >= sine_table.size())
             {
@@ -126,7 +126,7 @@ namespace neato
     class ConstSaw : public ISampleSource
     {
     public:
-        ConstSaw(float frequency_in, float sample_rate_in, bool negative_slope_in)
+        ConstSaw(double frequency_in, double sample_rate_in, bool negative_slope_in)
             :index(0)
         {
             uint32_t samples_per_cycle = uint32_t (sample_rate_in / frequency_in);
@@ -154,7 +154,7 @@ namespace neato
             }
             return value;
         }
-        float Value() const { return saw_table[index];}
+        double Value() const { return saw_table[index];}
     private:
         std::vector<double> saw_table;
         std::vector<double>::size_type index;
@@ -163,7 +163,7 @@ namespace neato
     class MutableSaw : public ISampleSource
     {
     public:
-        MutableSaw(float frequency_in, float sample_rate_in, bool negative_slope_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
+        MutableSaw(double frequency_in, double sample_rate_in, bool negative_slope_in, std::shared_ptr<ISampleSource> frequency_modulator_in)
         : theta(frequency_in, sample_rate_in, frequency_modulator_in)
         , value(0.0f)
         , negative_slope(negative_slope_in)
@@ -184,7 +184,7 @@ namespace neato
             return ret_value;
         }
         virtual double getFreguency() {return theta.getFrequency();}
-        virtual void setFrequency(float new_frequency)
+        virtual void setFrequency(double new_frequency)
         {
             theta.setFrequency(new_frequency);
         }

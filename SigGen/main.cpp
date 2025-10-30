@@ -10,7 +10,12 @@
 
 int main(int argc, const char * argv[])
 {
-    ::CoInitialize(nullptr);
+    HRESULT hr = CoInitialize(nullptr);
+    if FAILED(hr)
+    {
+        std::cout << "Unable to initialize COM library" << std::endl;
+        return -1;
+    }
     int ret_val = 0;
     neato::audio_stream_description_t create_params;
     std::shared_ptr<neato::PlatformRenderConstantsDictionary> render_constants = neato::CreateRenderConstantsDictionary();
@@ -24,7 +29,7 @@ int main(int argc, const char * argv[])
     create_params.bits_per_channel = 16;
     create_params.sample_rate = 48000;
 
-    std::shared_ptr<neato::IRenderCallback> callback = std::make_shared<TestRenderer>(create_params);
+    std::shared_ptr<neato::IRenderCallback> callback = std::make_shared<TestRenderer>();
     
     std::shared_ptr<neato::IRenderGraph> renderer;
     try
