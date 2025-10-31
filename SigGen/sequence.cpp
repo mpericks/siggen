@@ -1,7 +1,8 @@
-#include "note.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>
+
+#include "sequence.h"
 
 namespace neato
 {
@@ -104,7 +105,7 @@ namespace neato
         void UpdateSummer(uint64_t sample_count)
         {
             auto range = milestones.equal_range(static_cast<uint64_t>(sample_count));
-            for (auto it = range.first; it != range.second; ++it)
+            for (auto& it = range.first; it != range.second; ++it)
             {
                 const SequenceMilestone& milestone = it->second;
                 if (milestone.on_off)

@@ -9,7 +9,7 @@
 
 #include "envelope.hpp"
 #include "TestRenderer.hpp"
-#include "note.h"
+#include "sequence.h"
 
 //#include "composite_waveforms.hpp"
 

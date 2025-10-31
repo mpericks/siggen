@@ -36,7 +36,7 @@
     <ClInclude Include="SigGen\RenderGraph_Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SigGen\note.h">
+    <ClInclude Include="SigGen\sequence.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -59,7 +59,7 @@
     <ClCompile Include="SigGen\RenderGraph_Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SigGen\note.cpp">
+    <ClCompile Include="SigGen\sequence.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

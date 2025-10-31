@@ -131,7 +131,7 @@
     <ClInclude Include="SigGen\base_waveforms.hpp" />
     <ClInclude Include="SigGen\composite_waveforms.hpp" />
     <ClInclude Include="SigGen\envelope.hpp" />
-    <ClInclude Include="SigGen\note.h" />
+    <ClInclude Include="SigGen\sequence.h" />
     <ClInclude Include="SigGen\RenderGraph.h" />
     <ClInclude Include="SigGen\RenderGraph_Win.h" />
     <ClInclude Include="SigGen\TestRenderer.hpp" />
@@ -141,7 +141,7 @@
     <ClCompile Include="SigGen\composite_waveforms.cpp" />
     <ClCompile Include="SigGen\envelope.cpp" />
     <ClCompile Include="SigGen\main.cpp" />
-    <ClCompile Include="SigGen\note.cpp" />
+    <ClCompile Include="SigGen\sequence.cpp" />
     <ClCompile Include="SigGen\RenderGraph_Win.cpp" />
     <ClCompile Include="SigGen\TestRenderer.cpp" />
   </ItemGroup>
