@@ -8,7 +8,7 @@
 #pragma once
 #include <Windows.h>
 
-#define PLATFORM_FORMAT_MEMBERS_REQUIRED 0
+constexpr bool PLATFORM_FORMAT_MEMBERS_REQUIRED = 0;
 
 namespace neato
 {
@@ -16,6 +16,7 @@ namespace neato
 
     struct render_params_t
     {
+        render_params_t() : frame_count(0), frame_buffer(nullptr) {}
         uint32_t frame_count;
         uint8_t* frame_buffer;
     };

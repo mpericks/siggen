@@ -42,6 +42,10 @@ namespace neato
 
     struct SequenceMilestone
     {
+        SequenceMilestone()
+            :on_off(false)
+        {
+        }
         sequence_element element;
         bool on_off;
     };

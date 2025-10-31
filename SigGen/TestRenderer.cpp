@@ -13,7 +13,7 @@
 
 //#include "composite_waveforms.hpp"
 
-std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
+static std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     //frequency of the carrier gets modulated by a saw with a constant gain
     std::shared_ptr<neato::ISampleSource> saw_temp = std::make_shared<neato::ConstSaw>(1.4 * center_freq, stream_desc_in.sample_rate, false);
@@ -37,7 +37,7 @@ std::shared_ptr<neato::ISampleSource> CreateFMBell(double center_freq, const nea
     return signal;
 }
 
-std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sample_rate)
+static std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sample_rate)
 {
     const uint8_t harmonic_count = 6;
     const double tremolo_freq = 5.0;
@@ -91,7 +91,7 @@ std::shared_ptr<neato::ISampleSource> CreateFlute(double center_freq, double sam
     return std::make_shared<neato::SampleMultiplier>(raw_sig, env_temp);
 }
 
-std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, double sample_rate)
+static std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, double sample_rate)
 {
     std::vector<neato::sequence_element> elements;
     std::vector<double> frequencies = { 
@@ -152,7 +152,7 @@ std::shared_ptr<neato::ISampleSource> CreateFluteSequence(double center_freq, do
 
 }
 
-std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
+static std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     std::vector<double> frequency_multiples = {1.0, 1.272, 1.554};//, 6.0 / 3.89};
     std::vector<double> frequencies = neato::FrequenciesFromMultiples(center_freq, std::move(frequency_multiples));// = {400.0, 500.0, 600.00};
@@ -179,7 +179,7 @@ std::shared_ptr<neato::ISampleSource> CreateCompositeSignalWithBellEnvelopes(dou
     return composite_signal;
 }
 
-std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
+static std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     std::vector<double> frequency_multiples = {0.56, 0.92, 1.19, 1.71, 2, 2.74, 3, 3.76, 4.07, 5.50};
     const std::vector<double>::size_type signal_count = frequency_multiples.size();
@@ -216,7 +216,7 @@ std::shared_ptr<neato::ISampleSource> CreateAdditiveBell(double center_freq, con
     return composite_signal;
 }
 
-std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
+static std::shared_ptr<neato::ISampleSource> CreateHarmonicBells(double center_freq, const neato::audio_stream_description_t& stream_desc_in)
 {
     std::shared_ptr<neato::ISampleSource> bell1 = CreateAdditiveBell(center_freq, stream_desc_in);
     std::shared_ptr<neato::ISampleSource> bell2 = CreateAdditiveBell(center_freq * 0.5, stream_desc_in);

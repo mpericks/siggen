@@ -27,7 +27,7 @@ namespace neato
             seconds = accumulated_samples / sample_rate;
             return seconds;
         }
-        double Value()
+        double Value() const
         {
             return seconds;
         }

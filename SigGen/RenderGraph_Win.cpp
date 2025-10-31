@@ -427,7 +427,7 @@ private:
 
     WAVEFORMATEXTENSIBLE CreateWaveFormat(const neato::audio_stream_description_t& stream_desc)
     {
-        WAVEFORMATEXTENSIBLE wave_format;
+        WAVEFORMATEXTENSIBLE wave_format = { 0 };
         wave_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
         wave_format.Format.nSamplesPerSec = (DWORD)stream_desc.sample_rate;
         wave_format.Format.wBitsPerSample = stream_desc.bits_per_channel;

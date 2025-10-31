@@ -141,7 +141,7 @@ private:
     
 };
 
-std::shared_ptr<neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
+static std::shared_ptr<neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
 {
     std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in, scale);
     
