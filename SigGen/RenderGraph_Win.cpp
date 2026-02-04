@@ -13,7 +13,7 @@ using Microsoft::WRL::ComPtr;
 using com_memory_ptr_t = std::unique_ptr<void, decltype(&CoTaskMemFree)>;
 using auto_handle_t = std::unique_ptr<void, decltype(&CloseHandle)>;
 
-class WinRenderConstants : public  neato::PlatformRenderConstantsDictionary
+class WinRenderConstants : public  Neato::PlatformRenderConstantsDictionary
 {
 public:
     virtual uint32_t Format(const uint32_t format) const
@@ -21,10 +21,10 @@ public:
         uint32_t format_out = WAVE_FORMAT_PCM;
         switch (format)
         {
-        case neato::format_id_pcm:
+        case Neato::format_id_pcm:
             format_out = WAVE_FORMAT_PCM;
             break;
-        case neato::format_id_float_32:
+        case Neato::format_id_float_32:
 			format_out = WAVE_FORMAT_IEEE_FLOAT;
 			break;
         default:
@@ -38,13 +38,13 @@ public:
         uint32_t platform_flag = 0;
         switch (flag)
         {
-            case neato::format_flag_signed_int:
+            case Neato::format_flag_signed_int:
                 //platform_flag = kAudioFormatFlagIsSignedInteger;
                 break;
-            case neato::format_flag_packed:
+            case Neato::format_flag_packed:
                 //platform_flag = kAudioFormatFlagIsPacked;
                 break;
-            case neato::format_flag_non_interleaved:
+            case Neato::format_flag_non_interleaved:
                 //platform_flag = kAudioFormatFlagIsNonInterleaved;
                 break;
             default:
@@ -55,7 +55,7 @@ public:
     }
 };
 
-class WinRenderReturn : public neato::IRenderReturn
+class WinRenderReturn : public Neato::IRenderReturn
 {
 public:
     WinRenderReturn()
@@ -70,7 +70,7 @@ public:
     {
         SetCodeAndDescription(code, desc);
     }
-    virtual neato::OS_RETURN GetErrorCode() const
+    virtual Neato::OS_RETURN GetErrorCode() const
     {
         return _code;
     }
@@ -111,21 +111,21 @@ private:
     DWORD _code;
 };
 
-std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn()
+std::shared_ptr<Neato::IRenderReturn> Neato::CreateRenderReturn()
 {
     return std::make_shared<WinRenderReturn>();
 }
-std::shared_ptr<neato::IRenderReturn> neato::CreateRenderReturn(OS_RETURN status, const utf8_string& desc)
+std::shared_ptr<Neato::IRenderReturn> Neato::CreateRenderReturn(OS_RETURN status, const utf8_string& desc)
 {
     return std::make_shared<WinRenderReturn>(status, desc);
 }
 
 DWORD WINAPI RenderThread(void* param);
 
-class WinRenderGraph : public neato::IRenderGraph
+class WinRenderGraph : public Neato::IRenderGraph
 {
 public:
-    WinRenderGraph(const neato::audio_stream_description_t& params, std::shared_ptr<neato::IRenderCallback> callback)
+    WinRenderGraph(const Neato::audio_stream_description_t& params, std::shared_ptr<Neato::IRenderCallback> callback)
         : _generic_stream_desc(params)
         , _stream_switch_in_progress(false)
         , _thread(nullptr, &::CloseHandle)
@@ -215,7 +215,7 @@ public:
             throw std::exception(msg.c_str());
         }
 
-        _generic_stream_desc = CreateNeutralStreamDescription((WAVEFORMATEXTENSIBLE)*p_wave_format_out);
+        _generic_stream_desc = CreateNeutralStreamDescription((WAVEFORMATEXTENSIBLE)*p_wave_format_out, _buffer_frame_count);
         std::memcpy(&_mix_format, p_wave_format_out, sizeof(WAVEFORMATEXTENSIBLE));
 
         _frame_size = _mix_format.Format.nBlockAlign;
@@ -251,7 +251,7 @@ public:
         }
     }
 
-    virtual std::shared_ptr<neato::IRenderReturn> Start()
+    virtual std::shared_ptr<Neato::IRenderReturn> Start()
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
 
@@ -262,7 +262,7 @@ public:
         return error;
     }
 
-    virtual std::shared_ptr<neato::IRenderReturn> Stop()
+    virtual std::shared_ptr<Neato::IRenderReturn> Stop()
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
 
@@ -276,7 +276,7 @@ public:
 
     void Render()
     {
-        neato::render_params_t params;
+        Neato::render_params_t params;
         bool stillPlaying = true;
         std::vector<HANDLE> wait_handles = { _shutdown_event.get(), _stream_switch_event.get(), _audio_samples_needed_event.get()};
         HRESULT hr;
@@ -334,9 +334,9 @@ public:
     }
 
 private:
-    neato::audio_stream_description_t CreateNeutralStreamDescription(const WAVEFORMATEXTENSIBLE& wave_format)
+    Neato::audio_stream_description_t CreateNeutralStreamDescription(const WAVEFORMATEXTENSIBLE& wave_format, uint32_t buffer_frame_count)
     {
-        neato::audio_stream_description_t ret_val;
+        Neato::audio_stream_description_t ret_val;
         ret_val.sample_rate = wave_format.Format.nSamplesPerSec;
         ret_val.bits_per_channel = wave_format.Format.wBitsPerSample;
         ret_val.channels_per_frame = wave_format.Format.nChannels;
@@ -344,6 +344,7 @@ private:
         // that the client obtains by calling the IAudioClient::GetMixFormat method.
         // https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudiorenderclient-getbuffer
         ret_val.bytes_per_frame = wave_format.Format.nBlockAlign;
+        ret_val.hardware_buffer_frame_count = buffer_frame_count;
 
         if (wave_format.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
         {
@@ -351,12 +352,12 @@ private:
             {
                 if (32 == wave_format.Format.wBitsPerSample)
                 {
-                    ret_val.format_id = neato::format_id_float_32;
+                    ret_val.format_id = Neato::format_id_float_32;
                 }
                 
                 else if (64 == wave_format.Format.wBitsPerSample)
                 {
-                    ret_val.format_id = neato::format_id_float_64;
+                    ret_val.format_id = Neato::format_id_float_64;
                 }
                 else
                 {
@@ -374,14 +375,14 @@ private:
                     _RPTF0(_CRT_ERROR, msg.c_str());
                     throw std::exception(msg.c_str());
                 }
-                ret_val.format_id = neato::format_id_pcm;
+                ret_val.format_id = Neato::format_id_pcm;
             }
             else if (::IsEqualGUID(wave_format.SubFormat, GUID_NULL))
             {
                 // some chucklehead is making us guess
                 if (wave_format.Format.wBitsPerSample == 32)
                 {
-                    ret_val.format_id = neato::format_id_float_32;
+                    ret_val.format_id = Neato::format_id_float_32;
                 }
             }
         }
@@ -393,18 +394,18 @@ private:
                 _RPTF0(_CRT_ERROR, msg.c_str());
                 throw std::exception(msg.c_str());
             }
-            ret_val.format_id = neato::format_id_pcm;
+            ret_val.format_id = Neato::format_id_pcm;
         }
         else if (wave_format.Format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
         {
             //vary between 1.0 and -1.0
             if (32 == wave_format.Format.wBitsPerSample)
             {
-                ret_val.format_id = neato::format_id_float_32;
+                ret_val.format_id = Neato::format_id_float_32;
             }
             else if (64 == wave_format.Format.wBitsPerSample)
             {
-                ret_val.format_id = neato::format_id_float_64;
+                ret_val.format_id = Neato::format_id_float_64;
             }
             else
             {
@@ -425,7 +426,7 @@ private:
         return ret_val;
     }
 
-    WAVEFORMATEXTENSIBLE CreateWaveFormat(const neato::audio_stream_description_t& stream_desc)
+    WAVEFORMATEXTENSIBLE CreateWaveFormat(const Neato::audio_stream_description_t& stream_desc)
     {
         WAVEFORMATEXTENSIBLE wave_format = { 0 };
         wave_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -440,7 +441,7 @@ private:
         // >>> Some device drivers will report that they support a 1-channel or 2-channel PCM format 
         // >>> if the format is specified by a stand-alone WAVEFORMATEX structure, 
         // >>> but will reject the same format if it is specified by a WAVEFORMATEXTENSIBLE structure.
-        if (stream_desc.format_id == neato::format_id_pcm)
+        if (stream_desc.format_id == Neato::format_id_pcm)
         {
             if (stream_desc.channels_per_frame < 3)
             {
@@ -449,7 +450,7 @@ private:
             }
             wave_format.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }
-        else if (stream_desc.format_id == neato::format_id_float_32)
+        else if (stream_desc.format_id == Neato::format_id_float_32)
         {
             wave_format.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
         }
@@ -462,7 +463,7 @@ private:
     ComPtr<IAudioClient3> _audio_client;
     ComPtr<IAudioRenderClient> _render_client;
     ComPtr<IAudioSessionControl> _session_control;
-    neato::audio_stream_description_t _generic_stream_desc;
+    Neato::audio_stream_description_t _generic_stream_desc;
     WAVEFORMATEXTENSIBLE _mix_format;
     uint32_t _frame_size;
     uint32_t _buffer_frame_count;
@@ -473,7 +474,7 @@ private:
     auto_handle_t _stream_switch_event;           // Set when the current session is disconnected or the default device changes.
     auto_handle_t _stream_switch_complete_event;  // Set when the default device has been changed internally.
 
-    std::shared_ptr<neato::IRenderCallback> _renderImpl;
+    std::shared_ptr<Neato::IRenderCallback> _renderImpl;
 };
 
 DWORD WINAPI RenderThread(void* param)
@@ -483,13 +484,13 @@ DWORD WINAPI RenderThread(void* param)
     return 0;
 }
 
-std::shared_ptr<neato::PlatformRenderConstantsDictionary> neato::CreateRenderConstantsDictionary()
+std::shared_ptr<Neato::PlatformRenderConstantsDictionary> Neato::CreateRenderConstantsDictionary()
 {
     return std::make_shared<WinRenderConstants>();
 }
 
-std::shared_ptr<neato::IRenderGraph> neato::CreateRenderGraph(const neato::audio_stream_description_t& creation_params, std::shared_ptr<neato::IRenderCallback> callback)
+std::shared_ptr<Neato::IRenderGraph> Neato::CreateRenderGraph(const Neato::audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderCallback> callback)
 {
-    std::shared_ptr<neato::IRenderGraph> graph = std::make_shared<WinRenderGraph>(creation_params, callback);
+    std::shared_ptr<Neato::IRenderGraph> graph = std::make_shared<WinRenderGraph>(creation_params, callback);
     return graph;
 }

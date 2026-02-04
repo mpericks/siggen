@@ -19,7 +19,7 @@ typedef std::string utf8_string;
 #include "RenderGraph_Win.h"
 #endif //_WIN32 || _WIN64
 
-namespace neato
+namespace Neato
 {
     constexpr uint32_t format_id_pcm = 1;
     constexpr uint32_t format_id_float_32 = 2;
@@ -45,6 +45,7 @@ namespace neato
         uint32_t bits_per_channel = 0;
         uint32_t channels_per_frame = 0;
         uint32_t bytes_per_frame = 0;
+        uint32_t hardware_buffer_frame_count;
 #if PLATFORM_FORMAT_MEMBERS_REQUIRED == true
         PlatformAudioFormatMembers platform_specific_info;
         //uint32_t frames_per_packet;
@@ -70,8 +71,8 @@ namespace neato
 
     struct IRenderCallback
     {
-        virtual std::shared_ptr<neato::IRenderReturn> Render(const neato::render_params_t& args) = 0;
-        virtual void RendererCreated(const neato::audio_stream_description_t& creation_params) = 0;
+        virtual std::shared_ptr<Neato::IRenderReturn> Render(const Neato::render_params_t& args) = 0;
+        virtual void RendererCreated(const Neato::audio_stream_description_t& creation_params) = 0;
         /// <summary>
         ///  gets the number of frames that are in the buffer, ready to render. 
         ///  a "frame" is a single set of samples for all channels for a single time slice
@@ -83,5 +84,5 @@ namespace neato
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();
     std::shared_ptr<IRenderReturn> CreateRenderReturn();
     std::shared_ptr<IRenderReturn> CreateRenderReturn(OS_RETURN, const utf8_string&);
-    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params, std::shared_ptr<neato::IRenderCallback> callback);
+    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderCallback> callback);
 };

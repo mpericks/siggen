@@ -12,7 +12,7 @@
 #include <vector>
 #include <cassert>
 
-namespace neato
+namespace Neato
 {
     enum class GainSegmentId
     {
@@ -21,10 +21,10 @@ namespace neato
     };
 }
 
-class LinearEnvelopeSegment : public neato::IEnvelopeSegment
+class LinearEnvelopeSegment : public Neato::IEnvelopeSegment
 {
 public:
-    LinearEnvelopeSegment(double sample_rate_in, double gain_start_value, double gain_target_value, double gain_duration_time, neato::GainSegmentId id)
+    LinearEnvelopeSegment(double sample_rate_in, double gain_start_value, double gain_target_value, double gain_duration_time, Neato::GainSegmentId id)
         : sample_time_accumulator(sample_rate_in)
         , current_segment_sample_index(0)
         , p_callback(nullptr)
@@ -64,26 +64,26 @@ public:
         
         return return_gain;
     }
-    virtual void SetGainStateCompletionCallback(std::shared_ptr<neato::IStateCompletionCallback> callback_in)
+    virtual void SetGainStateCompletionCallback(std::shared_ptr<Neato::IStateCompletionCallback> callback_in)
     {
         callback = callback_in;
         p_callback = callback.get();
     }
-    virtual void SetGainStateCompletionCallback(neato::IStateCompletionCallback* p_callback_in)
+    virtual void SetGainStateCompletionCallback(Neato::IStateCompletionCallback* p_callback_in)
     {
         p_callback = p_callback_in;
     }
 private:
-    neato::AudioTime sample_time_accumulator;
+    Neato::AudioTime sample_time_accumulator;
     
     std::vector<double> gains_for_each_sample;
     std::vector<double>::size_type current_segment_sample_index;
-    std::shared_ptr<neato::IStateCompletionCallback> callback;
-    neato::IStateCompletionCallback* p_callback;
-    neato::GainSegmentId id;
+    std::shared_ptr<Neato::IStateCompletionCallback> callback;
+    Neato::IStateCompletionCallback* p_callback;
+    Neato::GainSegmentId id;
 };
 
-class ConstEnvelope : public neato::ISampleSource
+class ConstEnvelope : public Neato::ISampleSource
 {
 public:
     ConstEnvelope(double gain_in) : gain(gain_in)
@@ -98,12 +98,12 @@ private:
     double gain;
 };
 
-class Bell1Envelope : public neato::ISampleSource, public neato::IStateCompletionCallback
+class Bell1Envelope : public Neato::ISampleSource, public Neato::IStateCompletionCallback
 {
 public:
     Bell1Envelope(double sample_rate_in, double scale)
-        : attack(sample_rate_in, 0.0, 0.5 * scale, 0.003, neato::GainSegmentId::attack)
-        , decay(sample_rate_in, 0.5 * scale, 0.0, 3.75, neato::GainSegmentId::decay)
+        : attack(sample_rate_in, 0.0, 0.5 * scale, 0.003, Neato::GainSegmentId::attack)
+        , decay(sample_rate_in, 0.5 * scale, 0.0, 3.75, Neato::GainSegmentId::decay)
         , current_segment(nullptr)
     {
         attack.SetGainStateCompletionCallback(this);
@@ -125,11 +125,11 @@ public:
     }
     virtual void StateComplete(int stage_id)
     {
-        if (stage_id == (int)neato::GainSegmentId::attack)
+        if (stage_id == (int)Neato::GainSegmentId::attack)
         {
             current_segment = &decay;
         }
-        if (stage_id == (int)neato::GainSegmentId::decay)
+        if (stage_id == (int)Neato::GainSegmentId::decay)
         {
             current_segment = &attack;
         }
@@ -137,24 +137,24 @@ public:
 private:
     LinearEnvelopeSegment attack;
     LinearEnvelopeSegment decay;
-    neato::IEnvelopeSegment* current_segment;
+    Neato::IEnvelopeSegment* current_segment;
     
 };
 
-static std::shared_ptr<neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
+static std::shared_ptr<Neato::ISampleSource> CreateBell1(double sample_rate_in, double scale)
 {
-    std::shared_ptr<neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in, scale);
+    std::shared_ptr<Neato::ISampleSource> envelope = std::make_shared<Bell1Envelope>(sample_rate_in, scale);
     
     return envelope;
 }
 
-std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id, double sample_rate_in, double scale_in)
+std::shared_ptr<Neato::ISampleSource> Neato::CreateEnvelope(Neato::EnvelopeID id, double sample_rate_in, double scale_in)
 {
-    std::shared_ptr<neato::ISampleSource> envelope;
+    std::shared_ptr<Neato::ISampleSource> envelope;
     
     switch (id)
     {
-        case neato::EnvelopeID::Bell1:
+        case Neato::EnvelopeID::Bell1:
             envelope = CreateBell1(sample_rate_in, scale_in);
             break;
         default:
@@ -164,21 +164,21 @@ std::shared_ptr<neato::ISampleSource> neato::CreateEnvelope(neato::EnvelopeID id
     return envelope;
 }
 
-double neato::dbToGain(double db)
+double Neato::dbToGain(double db)
 {
     double gain = 1.0;
     gain = std::pow(10.0, db / 20.0);
     return gain;
 }
 
-std::vector<double> neato::dbToGains(std::vector<double>&& gains_in_db)
+std::vector<double> Neato::dbToGains(std::vector<double>&& gains_in_db)
 {
     const std::vector<double>::size_type signal_count = gains_in_db.size();
     std::vector<double> gains;
     gains.reserve(signal_count);
     std::for_each(gains_in_db.begin(), gains_in_db.end(), [&gains](double db)
     {
-        gains.push_back(neato::dbToGain(db));
+        gains.push_back(Neato::dbToGain(db));
     });
     return gains;
 }

@@ -8,7 +8,7 @@
 #pragma once
 #include "base_waveforms.hpp"
 
-namespace neato
+namespace Neato
 {
     class IStateCompletionCallback
     {
@@ -16,7 +16,7 @@ namespace neato
         virtual void StateComplete(int stage_id)=0;
     };
 
-    class IEnvelopeSegment : public neato::ISampleSource
+    class IEnvelopeSegment : public Neato::ISampleSource
     {
     public:
         virtual void SetGainStateCompletionCallback(std::shared_ptr<IStateCompletionCallback> callback_in)=0;
@@ -28,7 +28,7 @@ namespace neato
         Bell1
     };
 
-    std::shared_ptr<neato::ISampleSource> CreateEnvelope(EnvelopeID id, double sample_rate_in, double scale);
+    std::shared_ptr<Neato::ISampleSource> CreateEnvelope(EnvelopeID id, double sample_rate_in, double scale);
 
     double dbToGain(double db);
     std::vector<double> dbToGains(std::vector<double>&& gains_in_db);

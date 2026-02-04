@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace neato
+namespace Neato
 {
     class AudioTime
     {

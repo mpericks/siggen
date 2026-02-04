@@ -4,7 +4,7 @@
 
 #include "sequence.h"
 
-namespace neato
+namespace Neato
 {
     class SampleSourceWithDuration : public ISampleSourceWithDuration
     {

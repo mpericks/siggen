@@ -10,7 +10,7 @@
 
 constexpr bool PLATFORM_FORMAT_MEMBERS_REQUIRED = 0;
 
-namespace neato
+namespace Neato
 {
     using OS_RETURN = DWORD;
 

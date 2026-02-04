@@ -2,7 +2,7 @@
 #include "base_waveforms.hpp"
 #include "envelope.hpp"
 
-namespace neato
+namespace Neato
 {
 	struct ISampleSourceWithDuration : public ISampleSource
 	{

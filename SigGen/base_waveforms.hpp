@@ -17,7 +17,7 @@
 
 constexpr static const double two_pi = std::numbers::pi * 2.0;
 
-namespace neato
+namespace Neato
 {
     class ISampleSource
     {
@@ -26,7 +26,7 @@ namespace neato
         virtual ~ISampleSource() = 0;
     };
 
-    typedef std::vector<std::shared_ptr<neato::ISampleSource>> sample_source_vector_t;
+    typedef std::vector<std::shared_ptr<Neato::ISampleSource>> sample_source_vector_t;
     
     class AudioRadians : public ISampleSource
     {

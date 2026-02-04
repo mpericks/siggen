@@ -8,7 +8,7 @@
 #include "base_waveforms.hpp"
 #include <cassert>
 
-namespace neato
+namespace Neato
 {
     ISampleSource::~ISampleSource()
     {
@@ -28,37 +28,37 @@ namespace neato
     
     std::vector<std::shared_ptr<ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<std::shared_ptr<ISampleSource>> source2_array)
     {
-        std::vector<std::shared_ptr<neato::ISampleSource>> ret_array;
-        std::vector<std::shared_ptr<neato::ISampleSource>>::size_type signal_count = source1_array.size();
+        std::vector<std::shared_ptr<Neato::ISampleSource>> ret_array;
+        std::vector<std::shared_ptr<Neato::ISampleSource>>::size_type signal_count = source1_array.size();
         assert(signal_count == source2_array.size());
         ret_array.reserve(signal_count);
         for( uint32_t i = 0; i < signal_count; i++)
         {
-            ret_array.push_back(std::make_shared<neato::SampleMultiplier>(source1_array.at(i), source2_array.at(i)));
+            ret_array.push_back(std::make_shared<Neato::SampleMultiplier>(source1_array.at(i), source2_array.at(i)));
         }
         return ret_array;
     }
-    std::vector<std::shared_ptr<neato::ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<double> multipliers)
+    std::vector<std::shared_ptr<Neato::ISampleSource>> CreateMultiplierArray(std::vector<std::shared_ptr<ISampleSource>> source1_array, std::vector<double> multipliers)
     {
-        std::vector<std::shared_ptr<neato::ISampleSource>> ret_array;
-        std::vector<std::shared_ptr<neato::ISampleSource>>::size_type signal_count = source1_array.size();
+        std::vector<std::shared_ptr<Neato::ISampleSource>> ret_array;
+        std::vector<std::shared_ptr<Neato::ISampleSource>>::size_type signal_count = source1_array.size();
         assert(signal_count == multipliers.size());
         ret_array.reserve(signal_count);
         for( uint32_t i = 0; i < signal_count; i++)
         {
-            ret_array.push_back(std::make_shared<neato::SampleMultiplier>(source1_array.at(i), multipliers.at(i)));
+            ret_array.push_back(std::make_shared<Neato::SampleMultiplier>(source1_array.at(i), multipliers.at(i)));
         }
         return ret_array;
     }
 
-    std::vector<std::shared_ptr<neato::ISampleSource>> CreateDCOffsetArray(std::vector<double> offsets)
+    std::vector<std::shared_ptr<Neato::ISampleSource>> CreateDCOffsetArray(std::vector<double> offsets)
     {
-        std::vector<std::shared_ptr<neato::ISampleSource>> ret_array;
+        std::vector<std::shared_ptr<Neato::ISampleSource>> ret_array;
         std::vector<double>::size_type signal_count = offsets.size();
         ret_array.reserve(signal_count);
         for( double offset : offsets)
         {
-            ret_array.push_back(std::make_shared<neato::DCOffset>(offset));
+            ret_array.push_back(std::make_shared<Neato::DCOffset>(offset));
         }
         return ret_array;
     }
@@ -68,11 +68,11 @@ namespace neato
         const std::vector<double>::size_type signal_count = frequencies.size();
         
         //make the const sine signals
-        std::vector<std::shared_ptr<neato::ISampleSource>> signals;
+        std::vector<std::shared_ptr<Neato::ISampleSource>> signals;
         signals.reserve(signal_count);
         for (std::vector<double>::size_type i = 0; i < signal_count; i++)
         {
-            std::shared_ptr<neato::ISampleSource> carrier = std::make_shared<neato::ConstSine>(frequencies.at(i), sample_rate);
+            std::shared_ptr<Neato::ISampleSource> carrier = std::make_shared<Neato::ConstSine>(frequencies.at(i), sample_rate);
             signals.push_back(carrier);
         }
         return signals;
