@@ -45,11 +45,10 @@ namespace Neato
         uint32_t bits_per_channel = 0;
         uint32_t channels_per_frame = 0;
         uint32_t bytes_per_frame = 0;
-        uint32_t hardware_buffer_frame_count;
+        uint32_t frames_per_packet;
+        uint32_t bytes_per_packet;
 #if PLATFORM_FORMAT_MEMBERS_REQUIRED == true
         PlatformAudioFormatMembers platform_specific_info;
-        //uint32_t frames_per_packet;
-        //uint32_t bytes_per_packet;
 #endif
     };
 
