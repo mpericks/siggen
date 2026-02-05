@@ -344,7 +344,8 @@ private:
         // that the client obtains by calling the IAudioClient::GetMixFormat method.
         // https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudiorenderclient-getbuffer
         ret_val.bytes_per_frame = wave_format.Format.nBlockAlign;
-        ret_val.hardware_buffer_frame_count = buffer_frame_count;
+        ret_val.frames_per_packet = buffer_frame_count;
+        ret_val.bytes_per_packet = ret_val.bytes_per_frame * ret_val.frames_per_packet;
 
         if (wave_format.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE)
         {

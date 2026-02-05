@@ -35,6 +35,10 @@ namespace Neato
         {
             accumulated_samples = 0;
         }
+        static uint64_t SampleCountFromMilliseconds(const double milliseconds, const double sample_rate)
+        {
+            return static_cast<uint64_t>((milliseconds * sample_rate) / 1000.0);
+        }
     private:
         double sample_rate;
         double accumulated_samples;
