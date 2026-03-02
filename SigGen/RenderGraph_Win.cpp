@@ -6,6 +6,7 @@
 #include <format>
 #include <audiopolicy.h>
 #include <memory>
+#include "avrt.h"
 #include "RenderGraph.h"
 
 using Microsoft::WRL::ComPtr;
@@ -278,6 +279,9 @@ public:
 
     void Render()
     {
+        DWORD nTaskIndex = 0;
+        HANDLE hTask = AvSetMmThreadCharacteristics(L"Neato::RenderGraph", &nTaskIndex);
+
         Neato::render_params_t params;
         bool stillPlaying = true;
         std::vector<HANDLE> wait_handles = { _shutdown_event.get(), _stream_switch_event.get(), _audio_samples_needed_event.get()};
@@ -332,6 +336,7 @@ public:
             }
         }
 
+        AvRevertMmThreadCharacteristics(hTask);
         return;
     }
 
