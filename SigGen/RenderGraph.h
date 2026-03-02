@@ -45,8 +45,8 @@ namespace Neato
         uint32_t bits_per_channel = 0;
         uint32_t channels_per_frame = 0;
         uint32_t bytes_per_frame = 0;
-        uint32_t frames_per_packet;
-        uint32_t bytes_per_packet;
+        uint32_t frames_per_packet = 0;
+        uint32_t bytes_per_packet = 0;
 #if PLATFORM_FORMAT_MEMBERS_REQUIRED == true
         PlatformAudioFormatMembers platform_specific_info;
 #endif
@@ -62,26 +62,32 @@ namespace Neato
         virtual void SetCodeAndDescription(OS_RETURN code, utf8_string dec) = 0;
     };
 
-    struct IRenderGraph
-    {
-        virtual std::shared_ptr<IRenderReturn> Start() = 0;
-        virtual std::shared_ptr<IRenderReturn> Stop() = 0;
-    };
-
     struct IRenderCallback
     {
         virtual std::shared_ptr<Neato::IRenderReturn> Render(const Neato::render_params_t& args) = 0;
-        virtual void RendererCreated(const Neato::audio_stream_description_t& creation_params) = 0;
-        /// <summary>
-        ///  gets the number of frames that are in the buffer, ready to render. 
-        ///  a "frame" is a single set of samples for all channels for a single time slice
-        /// </summary>
-        /// <returns>the count of the number of frames that the callback object has buffered</returns>
-        //virtual uint32_t GetFramesQueuedCount() = 0;
     };
+
+    struct IRenderGraph
+    {
+        virtual std::shared_ptr<IRenderReturn> Start(std::shared_ptr<IRenderCallback> render_callback) = 0;
+        virtual std::shared_ptr<IRenderReturn> Stop() = 0;
+    };
+
+    struct IRenderParamsValidatedCallback
+    {
+        /// <summary>
+        /// Used to inform the callback of the actual parameters that the renderer will be using, 
+        /// in case there are any adjustments from the requested parameters that the renderer had to make in order to create successfully. 
+        /// Use these actual parameters for any sample generation or other logic that depends on the stream description, 
+        /// rather than the requested parameters, to ensure correct behavior.
+        /// </summary>
+        /// <param name="creation_params">the render parameters that were succesfully negotiated with the rendering system</param>
+        virtual void RenderParamsValidated(const audio_stream_description_t& creation_params) = 0;
+    };
+
 
     std::shared_ptr<PlatformRenderConstantsDictionary> CreateRenderConstantsDictionary();
     std::shared_ptr<IRenderReturn> CreateRenderReturn();
     std::shared_ptr<IRenderReturn> CreateRenderReturn(OS_RETURN, const utf8_string&);
-    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderCallback> callback);
+    std::shared_ptr<IRenderGraph> CreateRenderGraph(const audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderParamsValidatedCallback> callback);
 };

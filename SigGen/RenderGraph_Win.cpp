@@ -125,7 +125,7 @@ DWORD WINAPI RenderThread(void* param);
 class WinRenderGraph : public Neato::IRenderGraph
 {
 public:
-    WinRenderGraph(const Neato::audio_stream_description_t& params, std::shared_ptr<Neato::IRenderCallback> callback)
+    WinRenderGraph(const Neato::audio_stream_description_t& params, std::shared_ptr<Neato::IRenderParamsValidatedCallback> callback)
         : _generic_stream_desc(params)
         , _stream_switch_in_progress(false)
         , _thread(nullptr, &::CloseHandle)
@@ -133,7 +133,7 @@ public:
         , _audio_samples_needed_event(nullptr, &::CloseHandle)
         , _stream_switch_event(nullptr, &::CloseHandle)
         , _stream_switch_complete_event(nullptr, &::CloseHandle)
-        , _renderImpl(callback)
+        , _params_callback(callback)
     {
         Initialize();
     }
@@ -220,7 +220,7 @@ public:
 
         _frame_size = _mix_format.Format.nBlockAlign;
 
-        _renderImpl->RendererCreated(_generic_stream_desc);
+        _params_callback->RenderParamsValidated(_generic_stream_desc);
 
         hr = _audio_client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                                                         _buffer_frame_count,
@@ -251,9 +251,11 @@ public:
         }
     }
 
-    virtual std::shared_ptr<Neato::IRenderReturn> Start()
+    virtual std::shared_ptr<Neato::IRenderReturn> Start(std::shared_ptr<Neato::IRenderCallback> render_callback)
     {
         std::shared_ptr<WinRenderReturn> error = std::make_shared<WinRenderReturn>();
+
+        _renderImpl = render_callback;
 
         _thread.reset(::CreateThread(nullptr, 0, RenderThread, this, 0, nullptr));
 
@@ -475,6 +477,7 @@ private:
     auto_handle_t _stream_switch_event;           // Set when the current session is disconnected or the default device changes.
     auto_handle_t _stream_switch_complete_event;  // Set when the default device has been changed internally.
 
+    std::shared_ptr<Neato::IRenderParamsValidatedCallback> _params_callback;
     std::shared_ptr<Neato::IRenderCallback> _renderImpl;
 };
 
@@ -490,7 +493,7 @@ std::shared_ptr<Neato::PlatformRenderConstantsDictionary> Neato::CreateRenderCon
     return std::make_shared<WinRenderConstants>();
 }
 
-std::shared_ptr<Neato::IRenderGraph> Neato::CreateRenderGraph(const Neato::audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderCallback> callback)
+std::shared_ptr<Neato::IRenderGraph> Neato::CreateRenderGraph(const Neato::audio_stream_description_t& creation_params, std::shared_ptr<Neato::IRenderParamsValidatedCallback> callback)
 {
     std::shared_ptr<Neato::IRenderGraph> graph = std::make_shared<WinRenderGraph>(creation_params, callback);
     return graph;
